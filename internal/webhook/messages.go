@@ -15,16 +15,16 @@ func handleMessages(event Event) {
 					if msg.Text != nil {
 						log.Println("Texto:", msg.Text.Body)
 					}
-					log.Println("TEXTO:", msg.Text.Body)
+					HandleText(msg)
 
 				case "imagem":
-					log.Println("Imagem ID:", msg.Image.ID)
+					HandleImage(msg)
 
 				case "audio":
-					log.Println("Audio ID:", msg.Audio.ID)
+					HandleAudio(msg)
 
 				case "document":
-					log.Println("Documento ID", msg.Document.ID)
+					HandleDocument(msg)
 
 				default:
 					log.Println("Tipo desconhecido:", msg.Type)

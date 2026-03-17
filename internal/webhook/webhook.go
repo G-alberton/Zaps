@@ -23,31 +23,45 @@ func verifyWebhook(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "forbidden", http.StatusForbidden)
 }
 
-func HandleWebhook(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		verifyWebhook(w, r)
-		return
+func HandleWebhook(contactService *services.contactService) http.HandlerFunc {
 
-	case http.MethodPost:
-		defer r.Body.Close()
+	return func(w http.ResponseWriter, r *http.Request) {
 
-		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+		switch r.Method {
 
-		var event Event
-
-		err := json.NewDecoder(r.Body).Decode(&event)
-		if err != nil {
-			log.Println("Erro ao decodificar JSON:", err)
-			http.Error(w, "invalid json", http.StatusBadRequest)
+		case http.MethodGet:
+			verifyWebhook(w, r)
 			return
+
+		case http.MethodPost:
+			defer r.Body.Close()
+
+			r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+			var event Event
+
+			err := json.NewDecoder(r.Body).Decode(&event)
+			if err != nil {
+				log.Println("Erro ao decodificar JSON:", err)
+				http.Error(w, "invalid json", http.StatusBadRequest)
+				return
+			}
+
+			w.WriteHeader(http.StatusOK)
+
+			for _, entry := range event.Entry {
+				for _, change := range entry.Changes {
+					for _, msg := range change.Value.Messages {
+
+						log.Println("Recebido de:", msg.From)
+
+						contactService.SaveContact(msg.From)
+					}
+				}
+			}
+
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
-
-		w.WriteHeader(http.StatusOK)
-
-		handleMessages(event)
-
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
