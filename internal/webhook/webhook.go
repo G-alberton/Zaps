@@ -64,7 +64,7 @@ func HandleWebhook(contactService *services.ContactService) http.HandlerFunc {
 
 						log.Println("Recebido de:", msg.From, name)
 
-						contactService.SaveContact(msg.From, name)
+						err := contactService.SaveContact(msg.From, name)
 						if err != nil {
 							log.Println("Erro ao salvar contato:", err)
 						}
