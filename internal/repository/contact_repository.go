@@ -11,7 +11,7 @@ type ContactRepository struct {
 	DB *sql.DB
 }
 
-func NewContatctRepository(db *sql.DB) *ContactRepository {
+func NewContactRepository(db *sql.DB) *ContactRepository {
 	return &ContactRepository{DB: db}
 }
 

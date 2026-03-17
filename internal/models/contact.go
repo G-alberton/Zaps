@@ -1,5 +1,6 @@
 package models
 
+//contact serve para salvar o contato
 type Contact struct {
 	Phone string
 	Name  string

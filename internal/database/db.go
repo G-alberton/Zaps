@@ -27,9 +27,21 @@ func Connect() *sql.DB {
 }
 
 /*
-	tabela tem que ser:
+	tabela para o contact:
 	create table contacts (
 		phone TEXT Primary Key,
 		name TEXT
 	);
+*/
+
+/*
+	tabela para o message:
+	create table messaages (
+		id Serial Primary key,
+		phone TEXT,
+		type text,
+		body text,
+		crated_at timestamp default current_timestamp
+	)
+
 */

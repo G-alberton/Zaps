@@ -13,12 +13,14 @@ import (
 func main() {
 	db := database.Connect()
 
-	contactRepo := repository.NewContatctRepository(db)
+	contactRepo := repository.NewContactRepository(db)
+	messageRepo := repository.NewMessageRepository(db)
 	contactService := services.NewContactService(contactRepo)
+	messageService := services.NewMessageService(messageRepo)
 
 	mux := http.NewServeMux()
 	// passa serviço para o webhook
-	mux.HandleFunc("/webhook", webhook.HandleWebhook(contactService))
+	mux.HandleFunc("/webhook", webhook.HandleWebhook(contactService, messageService))
 
 	server := &http.Server{
 		Addr:    ":8080",

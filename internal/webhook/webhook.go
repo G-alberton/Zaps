@@ -24,7 +24,9 @@ func verifyWebhook(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "forbidden", http.StatusForbidden)
 }
 
-func HandleWebhook(contactService *services.ContactService) http.HandlerFunc {
+func HandleWebhook(contactService *services.ContactService,
+	messageService *services.MessageService,
+) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -67,6 +69,17 @@ func HandleWebhook(contactService *services.ContactService) http.HandlerFunc {
 						err := contactService.SaveContact(msg.From, name)
 						if err != nil {
 							log.Println("Erro ao salvar contato:", err)
+						}
+
+						var body string
+
+						if msg.Text != nil {
+							body = msg.Text.Body
+						}
+
+						err = messageService.SaveMessage(msg.From, msg.Type, body)
+						if err != nil {
+							log.Println("Erro ao salvar mensagem", err)
 						}
 					}
 				}
