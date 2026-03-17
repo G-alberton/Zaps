@@ -52,11 +52,22 @@ func HandleWebhook(contactService *services.ContactService) http.HandlerFunc {
 
 			for _, entry := range event.Entry {
 				for _, change := range entry.Changes {
+
+					contractsMap := make(map[string]string)
+
+					for _, c := range change.Value.Contacts {
+						contractsMap[c.WaID] = c.Profile.Name
+					}
 					for _, msg := range change.Value.Messages {
 
-						log.Println("Recebido de:", msg.From)
+						name := contractsMap[msg.From]
 
-						contactService.SaveContact(msg.From)
+						log.Println("Recebido de:", msg.From, name)
+
+						contactService.SaveContact(msg.From, name)
+						if err != nil {
+							log.Println("Erro ao salvar contato:", err)
+						}
 					}
 				}
 			}

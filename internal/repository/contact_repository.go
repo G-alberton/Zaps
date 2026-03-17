@@ -15,7 +15,7 @@ func NewContatctRepository(db *sql.DB) *ContactRepository {
 	return &ContactRepository{DB: db}
 }
 
-func (r *ContactRepository) Save(contact models.Contact) {
+func (r *ContactRepository) Save(contact models.Contact) error {
 	query := `
 		INSERT INTO contacts (phone, name)
 		VALUES ($1, $2)
@@ -24,6 +24,22 @@ func (r *ContactRepository) Save(contact models.Contact) {
 
 	_, err := r.DB.Exec(query, contact.Phone, contact.Name)
 	if err != nil {
-		log.Println("Erro ao salvar contato:", err)
+		return err
 	}
+
+	return nil
+}
+
+func (r *ContactRepository) Exists(phone string) bool {
+	query := `SELECT EXISTS(SELECT 1 FROM contacts WHERE phone = $1)`
+
+	var exists bool
+
+	err := r.DB.QueryRow(query, phone).Scan(&exists)
+	if err != nil {
+		log.Println("Erro ao verificar contato:", err)
+		return false
+	}
+
+	return exists
 }

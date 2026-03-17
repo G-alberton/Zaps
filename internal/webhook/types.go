@@ -27,6 +27,13 @@ type Event struct {
 		Changes []struct {
 			Value struct {
 				Messages []Message `json:"messages"`
+
+				Contacts []struct {
+					Profile struct {
+						Name string `json:"name"`
+					} `json:"profile"`
+					WaID string `json:"wa_id"`
+				} `json:"contacts"`
 			} `json:"value"`
 		} `json:"changes"`
 	} `json:"entry"`
