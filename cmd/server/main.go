@@ -4,13 +4,21 @@ import (
 	"log"
 	"net/http"
 
+	"ZAPS/internal/database"
+	"ZAPS/internal/repository"
+	"ZAPS/internal/services"
 	"ZAPS/internal/webhook"
 )
 
 func main() {
-	mux := http.NewServeMux()
+	db := database.Connect()
 
-	mux.HandleFunc("/webhook", webhook.HandleWebhook)
+	contactRepo := repository.NewContatctRepository(db)
+	contactService := services.NewContactService(contactRepo)
+
+	mux := http.NewServeMux()
+	// passa serviço para o webhook
+	mux.HandleFunc("/webhook", webhook.HandleWebhook(contactService))
 
 	server := &http.Server{
 		Addr:    ":8080",

@@ -5,15 +5,15 @@ import (
 	"ZAPS/internal/repository"
 )
 
-type contactService struct {
+type ContactService struct {
 	repo *repository.ContactRepository
 }
 
-func NewContactService(repo *repository.ContactRepository) *contactService {
-	return &contactService{repo: repo}
+func NewContactService(repo *repository.ContactRepository) *ContactService {
+	return &ContactService{repo: repo}
 }
 
-func (s *contactService) SaveContact(phone string) {
+func (s *ContactService) SaveContact(phone string) {
 
 	contact := models.Contact{
 		Phone: phone,

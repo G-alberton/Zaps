@@ -8,7 +8,7 @@ import (
 )
 
 // faz a conexão com o banco de dados, lembrar de conectar aqui
-func Conect() *sql.DB {
+func Connect() *sql.DB {
 	connStr := "Acesso ao Banco de Dados"
 
 	db, err := sql.Open("Postgres", connStr)

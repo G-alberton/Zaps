@@ -1,6 +1,7 @@
 package webhook
 
 import (
+	"ZAPS/internal/services"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -23,7 +24,7 @@ func verifyWebhook(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "forbidden", http.StatusForbidden)
 }
 
-func HandleWebhook(contactService *services.contactService) http.HandlerFunc {
+func HandleWebhook(contactService *services.ContactService) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
