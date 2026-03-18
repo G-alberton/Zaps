@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type MediaService struct {
@@ -16,12 +17,17 @@ func NewMediaService(token string) *MediaService {
 	return &MediaService{Token: token}
 }
 
-func (s *MediaService) GetMediaURL(mediaID string) (string, error) {
-	url := fmt.Sprintf("http://graph.facebook.com/v19.0/%s", mediaID)
+type mediaResponse struct {
+	URL      string `json:"url"`
+	mimeType string `json:"mime_type"`
+}
+
+func (s *MediaService) GetMediaURL(mediaID string) (string, string, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v19.0/%s", mediaID)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	req.Header.Add("Authorization", "Bearer "+s.Token)
@@ -29,23 +35,40 @@ func (s *MediaService) GetMediaURL(mediaID string) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
+
 	defer resp.Body.Close()
 
-	var result struct {
-		URL string `json:"url"`
-	}
+	var result mediaResponse
 
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return result.URL, nil
+	return result.URL, result.mimeType, nil
 }
 
-func (s *MediaService) DowloadMedia(mediaURL, filePath string) error {
+func getExtension(mime string) string {
+
+	switch {
+	case strings.Contains(mime, "image/jpeg"):
+		return ".jpg"
+	case strings.Contains(mime, "image/png"):
+		return ".png"
+	case strings.Contains(mime, "audio/ogg"):
+		return ".ogg"
+	case strings.Contains(mime, "audio/mpeg"):
+		return ".mp3"
+	case strings.Contains(mime, "application/pdf"):
+		return ".pdf"
+	default:
+		return ""
+	}
+}
+
+func (s *MediaService) DownloadMedia(mediaURL, filePath string) error {
 
 	req, err := http.NewRequest("GET", mediaURL, nil)
 	if err != nil {
@@ -68,14 +91,45 @@ func (s *MediaService) DowloadMedia(mediaURL, filePath string) error {
 	defer file.Close()
 
 	_, err = io.Copy(file, resp.Body)
-	return err
-}
-
-func (s *MediaService) DowloadByID(mediaID, filePath string) error {
-	url, err := s.GetMediaURL(mediaID)
 	if err != nil {
 		return err
 	}
 
-	return s.DowloadMedia(url, filePath)
+	return nil
+}
+
+func saveToFile(path string, data []byte) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(data)
+	return err
+}
+
+func (s *MediaService) DownloadByID(mediaID, msgType string) (string, error) {
+
+	url, mime, err := s.GetMediaURL(mediaID)
+	if err != nil {
+		return "", err
+	}
+
+	ext := getExtension(mime)
+
+	folder := "downloads/" + msgType
+	err = os.MkdirAll(folder, os.ModePerm)
+	if err != nil {
+		return "", err
+	}
+
+	filePath := fmt.Sprintf("%s/%s%s", folder, mediaID, ext)
+
+	err = s.DownloadMedia(url, filePath)
+	if err != nil {
+		return "", err
+	}
+
+	return filePath, nil
 }

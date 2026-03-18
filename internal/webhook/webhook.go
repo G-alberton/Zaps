@@ -98,7 +98,7 @@ func HandleWebhook(contactService *services.ContactService,
 						if mediaID != "" {
 							filePath := "downloads/" + mediaID
 
-							err := mediaService.DowloadByID(mediaID, filePath)
+							filePath, err := mediaService.DownloadByID(mediaID, msg.Type)
 							if err != nil {
 								log.Println("Erro ao baixar mídia:", err)
 							} else {
