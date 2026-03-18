@@ -15,14 +15,18 @@ func NewMessageRepository(db *sql.DB) *MessageRepository {
 
 func (r *MessageRepository) Save(msg models.Message) error {
 	query := `
-		INSERT INTO messages (phone, type, body)
-		VALUE ($1, $2, $3);
+		INSERT INTO messages (from_phone, type, body, media_id, created_at)
+		VALUE ($1, $2, $3, $4, $5);
 	`
 
-	_, err := r.DB.Exec(query, msg.From, msg.Type, msg.Body)
-	if err != nil {
-		return err
-	}
+	_, err := r.DB.Exec(
+		query,
+		msg.From,
+		msg.Type,
+		msg.Body,
+		msg.MediaID,
+		msg.Timestamp,
+	)
 
-	return nil
+	return err
 }

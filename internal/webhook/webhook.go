@@ -1,6 +1,7 @@
 package webhook
 
 import (
+	"ZAPS/internal/models"
 	"ZAPS/internal/services"
 	"encoding/json"
 	"log"
@@ -26,6 +27,7 @@ func verifyWebhook(w http.ResponseWriter, r *http.Request) {
 
 func HandleWebhook(contactService *services.ContactService,
 	messageService *services.MessageService,
+	mediaService *services.MediaService,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -72,12 +74,46 @@ func HandleWebhook(contactService *services.ContactService,
 						}
 
 						var body string
+						var mediaID string
 
-						if msg.Text != nil {
-							body = msg.Text.Body
+						switch msg.Type {
+						case "text":
+							if msg.Text != nil {
+								body = msg.Text.Body
+							}
+						case "image":
+							if msg.Image != nil {
+								mediaID = msg.Image.ID
+							}
+						case "audio":
+							if msg.Audio != nil {
+								mediaID = msg.Audio.ID
+							}
+						case "document":
+							if msg.Document != nil {
+								mediaID = msg.Document.ID
+							}
 						}
 
-						err = messageService.SaveMessage(msg.From, msg.Type, body)
+						if mediaID != "" {
+							filePath := "downloads/" + mediaID
+
+							err := mediaService.DowloadByID(mediaID, filePath)
+							if err != nil {
+								log.Println("Erro ao baixar mídia:", err)
+							} else {
+								log.Println("Mídia salva em:", filePath)
+							}
+						}
+
+						message := models.Message{
+							From:    msg.From,
+							Type:    msg.Type,
+							Body:    body,
+							MediaID: mediaID,
+						}
+
+						err = messageService.SaveMessage(message)
 						if err != nil {
 							log.Println("Erro ao salvar mensagem", err)
 						}

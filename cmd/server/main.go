@@ -17,10 +17,11 @@ func main() {
 	messageRepo := repository.NewMessageRepository(db)
 	contactService := services.NewContactService(contactRepo)
 	messageService := services.NewMessageService(messageRepo)
+	mediaService := services.NewMediaService("Token")
 
 	mux := http.NewServeMux()
 	// passa serviço para o webhook
-	mux.HandleFunc("/webhook", webhook.HandleWebhook(contactService, messageService))
+	mux.HandleFunc("/webhook", webhook.HandleWebhook(contactService, messageService, mediaService))
 
 	server := &http.Server{
 		Addr:    ":8080",

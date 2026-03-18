@@ -35,13 +35,13 @@ func Connect() *sql.DB {
 */
 
 /*
-	tabela para o message:
-	create table messaages (
-		id Serial Primary key,
-		phone TEXT,
-		type text,
-		body text,
-		crated_at timestamp default current_timestamp
-	)
+	CREATE TABLE messages (
+	id SERIAL PRIMARY KEY,
+	from_phone TEXT,
+	type TEXT,
+	body TEXT,
+	media_id TEXT,
+	created_at TIMESTAMP DEFAULT NOW()
+);
 
 */
