@@ -139,6 +139,8 @@ body, html {
     line-height: 1.5;
     position: relative;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    position: relative;
+
 }
 
 .message-received .message-bubble{
@@ -160,6 +162,56 @@ body, html {
     text-align: right;
     opacity: 0.7;
 }
+
+.message-options-btn {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: var(--text-muterd);
+    font-size: 18px;
+    z-index: 10;
+}
+
+.message-bubble:hover .message-options-btn{
+    opacity: 1;
+}
+
+.message-menu {
+    display: none;
+    position: absolute;
+    top: 30px;
+    right: 5px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 100;
+    min-width: 120px;
+    overflow: hidden;
+}
+
+.message-menu.show {
+    display: flex;
+    flex-direction: column;
+}
+
+.message-menu button {
+    background: none;
+    border: none;
+    padding: 10px 15px;
+    text-align: left;
+    font-size: 14px;
+    cursor: pointer;
+    width: 100;
+}
+
+.message-menu button:hover{
+    background-color: var(--bg-light);
+}
+
+.delete-btn {color: #ff4d4d}
 
 /*aqui o design dos contatinho ali do lado*/
 
