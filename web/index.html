@@ -14,7 +14,22 @@
             </header>
             
             <div class="contacts-list">
+                <div class="contact-card active">
+                    <div class="contact-avatar"></div>
+                    <div class="contact-info">
+                        <span class="contact-name">João Silva</span>
+                        <span class="contact-last-msg">Olá! Gostaria de saber...</span>
+                    </div>
                 </div>
+
+                <div class="contact-card">
+                    <div class="contact-avatar"></div>
+                    <div class="contact-info">
+                        <span class="contact-name">Paulo Gomes</span>
+                        <span clas="contact-last-msg">Obrigado por ser Bonitão ...</span>
+                    </div>
+                </div>
+            </div>
         </aside>
 
         <main class="chat-area">
@@ -22,7 +37,20 @@
                 <strong>João Silva</strong> </header>
             
             <div class="messages-container">
+                <div class="message-row message-received">
+                    <div class="message-bubble">
+                        Olá! Gostaria de saber o status do meu contrato #1234,
+                        <span class="message-time">13:31</span>
+                    </div>
                 </div>
+
+                <div class="message-row message-sent">
+                    <div class="message-bubble">
+                        Com certeza João, vou verificar agora
+                        <span class="message-time">13:42</span>
+                    </div>
+                </div>
+            </div>
             
             <footer class="chat-input-area">
                 <input type="text" placeholder="Digite uma mensagem...">
@@ -30,5 +58,6 @@
             </footer>
         </main>
     </div>
+    <script src="js/script.js"></script>
 </body>
 </html>
