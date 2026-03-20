@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Dashboard</title>
+    <link rel="shortcut icon" href="assets/mascor.png" type="image/x-icon">
+    <title>Envia Mascor</title>
     <link rel="stylesheet" href="css/index.css">
 </head>
 <body>
@@ -34,7 +35,14 @@
 
         <main class="chat-area">
             <header class="chat-header">
-                <strong>João Silva</strong> </header>
+                <div class="chat-header-info">
+                    <strong>João Silva</strong> 
+                </div>
+                <div class="chat-search-wrapper">
+                    <input type="text" id="message-search" placeholder="Pesquisar Mensagem">
+                    <button id="search-button">🔍</button>
+                </div>
+            </header>
             
             <div class="messages-container">
                 <div class="message-row message-received">
@@ -69,7 +77,7 @@
             </div>
             
             <footer class="chat-input-area">
-                <input type="text" placeholder="Digite uma mensagem...">
+                <textarea id="chat-input" placeholder="Digite uma mensagem..." rows="1"></textarea>
                 <button class="send-button">Enviar</button>
             </footer>
         </main>

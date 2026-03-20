@@ -55,12 +55,60 @@ body, html {
 }
 
 .chat-header {
-    padding: 16px 24px;
-    background-color: var(--white);
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: #fff;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     font-weight: 600;
+}
+
+/*botão de progurar mensagem*/
+
+.chat-search-wrapper {
+    display: flex;
+    align-items: center;
+    background: #f0f2f5;
+    border-radius: 20px;
+    padding: 2px 10px;
+}
+
+#message-search{
+    border: none;
+    background: transparent;
+    padding: 8px;
+    outline: none;
+    width: 150px;
+    transition: width 0.3s;
+}
+
+#message-search:focus{
+    width: 250px;
+}
+
+.search-button{
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: absolute;
+    font-size: 16px;
+    color: #666;
+    padding: 5px;
+}
+
+#search-button:hover{
+    color: var(--primary-color);
+}
+
+.message-bubble[style*="background-color: rgb(255, 243, 205)"], 
+.message-highlight {
+    color: #333 !important;
+}
+
+.message-bubble[style*="background-color: rgb(255, 243, 205)"] .message-time {
+    color: #666 !important;
 }
 
 .messages-container {
@@ -73,29 +121,26 @@ body, html {
 
 
 .chat-input-area {
-    padding: 20px 30px;
-    background-color: var(--white);
-    border-top: 1px solid var(--border-color);
     display: flex;
-    align-items: center;
-    gap: 12px;
+    align-items: flex-end;
+    padding: 10px 15px;
+    background: #f0f2f5;
+    gap: 10px;
 }
 
-.chat-input-area input {
+#chat-input{
     flex: 1;
-    padding: 14px 20px;
-    background-color: var(--bg-light);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    outline: none;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 15px;
+    font-family: inherit;
     font-size: 15px;
-    transition: border-color 0.2s;
+    resize: none;
+    max-height: 150px;
+    outline: none;
+    line-height: 20px;
+    overflow-y: hidden;
 }
-
-.chat-input-area input:focus {
-    border-color: var(--primary-color);
-}
-
 
 .send-button {
     background-color: var(--primary-color);
