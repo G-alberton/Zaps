@@ -77,7 +77,13 @@
             </div>
             
             <footer class="chat-input-area">
+                <div id="recording-status" style="display: none !important">
+                    <div class="red-dot"></div>
+                    <span id="recording-timer">00:00</span>
+                    <span style="margin-left: 10px; color: #666">Gravando...</span>
+                </div>
                 <textarea id="chat-input" placeholder="Digite uma mensagem..." rows="1"></textarea>
+                <button class="audio-button">🎙️</button>
                 <button class="send-button">Enviar</button>
             </footer>
         </main>
