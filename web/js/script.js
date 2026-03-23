@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileInput = document.getElementById('file-input');
     const attachBnt = document.getElementById('attach-btn');
     const dropOverlay = document.getElementById('drop-zone-overlay');
-
+    
     let timerInterval;
     let seconds = 0;
 
@@ -215,6 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
             clearInterval(parseInt(playBtn.dataset.intervalId));
         }
     });
+
+    /*parou aqui*/
 
     attachBnt.addEventListener('click', () => fileInput.click());
 
