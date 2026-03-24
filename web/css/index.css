@@ -114,7 +114,7 @@ body, html {
 .messages-container {
     flex: 1;
     overflow-y: auto;
-    overflow-x: hidden; /* Garante que o scroll seja apenas vertical */
+    overflow-x: hidden; 
     padding: 20px;
     width: 100%;
     box-sizing: border-box;
@@ -231,7 +231,7 @@ body, html {
 .message-row {
     display: flex;
     width: 100%; 
-    box-sizing: border-box; /* Crucial para alinhar com o width: 100% */
+    box-sizing: border-box; 
     margin-bottom: 10px;
 }
 
@@ -260,23 +260,21 @@ body, html {
     overflow-wrap: break-word;
     white-space: pre-wrap;
     
-    /* Garante que a bolha não herde comportamentos de esticamento */
     flex-shrink: 0; 
     display: flex;
     flex-direction: column;
 }
 
-/* Ajuste específico para a mensagem enviada alinhar à direita corretamente */
 .message-sent .message-bubble {
     background-color: var(--primary-color);
     color: white;
-    border-bottom-right-radius: 4px; /* Pontinha do balão */
+    border-bottom-right-radius: 4px; 
 }
 
 .message-received .message-bubble {
     background-color: var(--white);
     color: var(--text-main);
-    border-bottom-left-radius: 4px; /* Pontinha do balão */
+    border-bottom-left-radius: 4px; 
 }
 
 .message-time {
@@ -285,7 +283,7 @@ body, html {
     margin-top: 4px;
     text-align: right;
     opacity: 0.6;
-    line-height: 1; /* Força o tempo a ser bem compacto */
+    line-height: 1; 
 }
 
 .message-options-btn {
@@ -758,7 +756,6 @@ body, html {
         overflow: hidden;
     }
 
-    /* A sidebar ocupa a tela inteira no mobile */
     .sidebar {
         width: 100%;
         position: absolute;
@@ -769,14 +766,13 @@ body, html {
         transition: transform 0.3s ease;
     }
 
-    /* Quando escondida no mobile, ela desliza para fora */
+
     .sidebar.hidden {
         transform: translateX(-100%);
-        margin-left: 0; /* Reseta a margem negativa do desktop */
-        opacity: 1;    /* Mantém visível durante o deslize */
+        margin-left: 0; 
+        opacity: 1;    
     }
 
-    /* A área do chat também ocupa 100% */
     .chat-area {
         width: 100%;
         position: absolute;
@@ -785,17 +781,14 @@ body, html {
         height: 100%;
     }
 
-    /* Ajustes no cabeçalho para mobile */
     .chat-header {
         padding: 10px;
     }
 
-    /* Esconde o campo de busca de mensagens no mobile para poupar espaço */
     .chat-search-wrapper {
         display: none; 
     }
 
-    /* Ajuste no tamanho dos cards de contato para toque */
     .contact-card {
         padding: 20px 15px;
     }
