@@ -729,3 +729,54 @@ body, html {
     margin-right: 15px;
     color: var(--primary-color);
 }
+
+/* --- RESPONSIVIDADE (MOBILE) --- */
+
+@media (max-width: 768px) {
+    .app-container {
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* A sidebar ocupa a tela inteira no mobile */
+    .sidebar {
+        width: 100%;
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        z-index: 100;
+        transition: transform 0.3s ease;
+    }
+
+    /* Quando escondida no mobile, ela desliza para fora */
+    .sidebar.hidden {
+        transform: translateX(-100%);
+        margin-left: 0; /* Reseta a margem negativa do desktop */
+        opacity: 1;    /* Mantém visível durante o deslize */
+    }
+
+    /* A área do chat também ocupa 100% */
+    .chat-area {
+        width: 100%;
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+    }
+
+    /* Ajustes no cabeçalho para mobile */
+    .chat-header {
+        padding: 10px;
+    }
+
+    /* Esconde o campo de busca de mensagens no mobile para poupar espaço */
+    .chat-search-wrapper {
+        display: none; 
+    }
+
+    /* Ajuste no tamanho dos cards de contato para toque */
+    .contact-card {
+        padding: 20px 15px;
+    }
+}

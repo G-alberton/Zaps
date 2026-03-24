@@ -452,4 +452,25 @@ function createContactCardHTML(name, lastMsg = "Nova conversa...") {
         };
     }
 });
+
+function handleMobileView() {
+    if (window.innerWidth <= 768) {
+        const sidebar = document.querySelector('.sidebar');
+        sidebar.classList.add('hidden');
+    }
+}
+
+document.querySelectorAll('.contact-card').forEach(card => {
+    card.addEventListener('click', () => {
+        handleMobileView();
+    });
+});
+
+const toggleBtn = document.getElementById('toggle-sidebar');
+toggleBtn.addEventListener('click', () => {
+    const sidebar = document.querySelector('.sidebar');
+    if (window.innerWidth <= 768) {
+        sidebar.classList.remove('hidden');
+    }
+});
 });
