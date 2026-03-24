@@ -69,9 +69,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveContactBtn = document.getElementById('save-contact-btn');
     const closeContactModal = document.querySelector('.close-contact-modal');
     const contactsList = document.querySelector('.contacts-list');
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+    const sidebar = document.querySelector('.sidebar');
     
     let timerInterval;
     let seconds = 0;
+
+    if (toggleSidebarBtn && sidebar) {
+    toggleSidebarBtn.onclick = () => {
+        sidebar.classList.toggle('hidden');
+        
+        // Opcional: Mudar o ícone do botão
+        if (sidebar.classList.contains('hidden')) {
+            toggleSidebarBtn.innerText = "➡️"; // Seta para voltar
+        } else {
+            toggleSidebarBtn.innerText = "☰"; // Menu normal
+        }
+    };
+    }
 
     function createMessageHTML(content, time, type = 'text') {
         const isAudio = type === 'audio';

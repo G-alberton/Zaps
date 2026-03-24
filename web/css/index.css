@@ -702,3 +702,30 @@ body, html {
     max-width: 500px;
     position: relative;
 }
+
+.main-container {
+    display: flex;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 350px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.sidebar.hidden{
+    margin-left: -350px;
+    opacity: 0;
+}
+
+.toggle-btn{
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    margin-right: 15px;
+    color: var(--primary-color);
+}
