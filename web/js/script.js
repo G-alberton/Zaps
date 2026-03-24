@@ -16,6 +16,37 @@ function handleCopy(btn) {
     }
 }
 
+function editContact(btn) {
+    const card = btn.closest('.contact-card');
+    const nameSpan = card.querySelector('.contact-name');
+    const currentName = nameSpan.innerText;
+    const newName = prompt("Digite o novo nome:", currentName);
+    
+    if (newName && newName.trim() !== "") {
+        nameSpan.innerText = newName;
+        if (card.classList.contains('active')) {
+            const chatHeaderName = document.querySelector('.chat-header-info strong');
+            if (chatHeaderName) chatHeaderName.innerText = newName;
+        }
+    }
+}
+
+function deleteContact(btn) {
+    if (confirm("Tem certeza que deseja excluir este contato?")) {
+        const card = btn.closest('.contact-card');
+        card.remove();
+        document.querySelector('.messages-container').innerHTML = "";
+        document.querySelector('.chat-header-info strong').innerText = "Selecione um contato";
+    }
+}
+
+function clearChat(btn) {
+    if (confirm("Deseja apagar todas as mensagens desta conversa?")) {
+        const messagesContainer = document.querySelector('.messages-container');
+        if (messagesContainer) messagesContainer.innerHTML = "";
+    }
+}
+
 function handleReply(btn) { console.log("Responder clicado"); }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -30,6 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileInput = document.getElementById('file-input');
     const attachBnt = document.getElementById('attach-btn');
     const dropOverlay = document.getElementById('drop-zone-overlay');
+    const contactCard = document.querySelectorAll('.contact-card');
+    const chatHeaderName = document.querySelector('.chat-header-info strong');
+    const contactSearch = document.getElementById('contact-search');
+    const addContactBtn = document.getElementById('add-contact-btn');
+    const addContactModal = document.getElementById('add-contact-modal');
+    const saveContactBtn = document.getElementById('save-contact-btn');
+    const closeContactModal = document.querySelector('.close-contact-modal');
+    const contactsList = document.querySelector('.contacts-list');
     
     let timerInterval;
     let seconds = 0;
@@ -156,12 +195,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     searchBtn.addEventListener('click', () => {
-        const term = searchInput.value.toLowerCase().trim();
-        document.querySelectorAll('.message-row').forEach(row => {
-            const text = row.querySelector('.message-text')?.innerText.toLowerCase() || "";
-            row.style.display = text.includes(term) || term === "" ? 'flex' : 'none';
-        });
+    const term = searchInput.value.toLowerCase().trim();
+    const messages = messagesContainer.querySelectorAll('.message-row');
+    
+    messages.forEach(row => {
+        const text = row.querySelector('.message-text')?.innerText.toLowerCase() || "";
+        const isAudio = row.querySelector('.audio-duration')?.innerText.toLowerCase() || "";
+        
+        if (text.includes(term) || isAudio.includes(term) || term === "") {
+            row.style.display = 'flex';
+        } else {
+            row.style.display = 'none';
+        }
     });
+});
 
     document.addEventListener('click', (e) => {
     const optionsBtn = e.target.closest('.message-options-btn');
@@ -216,8 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    /*parou aqui*/
-
     attachBnt.addEventListener('click', () => fileInput.click());
 
     fileInput.addEventListener('change', (e) => {
@@ -258,4 +303,138 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.messages-container').appendChild(row);
         document.querySelector('.messages-container').scrollTop = document.querySelector('.messages-container').scrollHeight;
     }
+
+    contactCard.forEach(card => {
+        card.addEventListener('click', () => {
+            contactCard.forEach(c => c.classList.remove('active'));
+
+            card.classList.add('active');
+
+            const name = card.querySelector('.contact-name').innerText;
+            chatHeaderName.innerText = name;
+
+            messagesContainer.innerHTML = "";
+        });
+    });
+
+    contactSearch,addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+
+        contactCard.forEach(card => {
+            const name = card.querySelector('.contact-name').innerText.toLowerCase();
+            if (name.includes(term)) {
+                card.style.display = "flex";
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+
+    addContactBtn.onclick = () => addContactModal.style.display = 'flex';
+    closeContactModal.onclick = () => addContactModal.style.display = 'none';
+
+    function setupContactClick(card) {
+    card.addEventListener('click', () => {
+        
+        document.querySelectorAll('.contact-card').forEach(c => c.classList.remove('active'));
+        
+        card.classList.add('active');
+        
+        const nameElement = card.querySelector('.contact-name');
+        if (nameElement && chatHeaderName) {
+            chatHeaderName.innerText = nameElement.innerText;
+        }
+        
+        if (messagesContainer) {
+            messagesContainer.innerHTML = "";
+        }
+    });
+}
+
+function createContactCardHTML(name, lastMsg = "Nova conversa...") {
+    const card = document.createElement('div');
+    card.classList.add('contact-card');
+    
+    card.innerHTML = `
+        <div class="contact-avatar"></div>
+        <div class="contact-info">
+            <span class="contact-name">${name}</span>
+            <span class="contact-last-msg">${lastMsg}</span>
+        </div>
+        <div class="contact-options-wrapper">
+            <button class="contact-options-btn" type="button">⋮</button>
+            <div class="contact-menu">
+                <button onclick="editContact(this)">Editar Nome</button>
+                <button onclick="clearChat(this)">Limpar Conversa</button>
+                <hr>
+                <button class="delete-contact-btn" onclick="deleteContact(this)">Excluir Contato</button>
+            </div>
+        </div>
+    `;
+    
+    const btn = card.querySelector('.contact-options-btn');
+    if (btn) {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const menu = card.querySelector('.contact-menu');
+            document.querySelectorAll('.contact-menu').forEach(m => {
+                if (m !== menu) m.classList.remove('show');
+            });
+            menu.classList.toggle('show');
+        };
+    }
+
+    setupContactClick(card);
+    
+    return card;
+}
+
+    saveContactBtn.onclick = () => {
+        const name = document.getElementById('new-contact-name').value.trim();
+        if (name) {
+            const newCard = createContactCardHTML(name);
+            contactsList.prepend(newCard); 
+            
+            document.getElementById('new-contact-name').value = '';
+            document.getElementById('new-contact-number').value = '';
+            addContactModal.style.display = 'none';
+        }
+    };
+
+    document.querySelectorAll('.contact-card').forEach(card => {
+        card.onclick = () => {
+            document.querySelectorAll('.contact-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            const name = card.querySelector('.contact-name').innerText;
+            document.querySelector('.chat-header-info strong').innerText = name;
+        };
+    });
+
+    document.querySelectorAll('.contact-card').forEach(card => {
+
+    if (!card.querySelector('.contact-options-wrapper')) {
+        const optionsHTML = `
+            <div class="contact-options-wrapper">
+                <button class="contact-options-btn" type="button">⋮</button>
+                <div class="contact-menu">
+                    <button onclick="editContact(this)">Editar Nome</button>
+                    <button onclick="clearChat(this)">Limpar Conversa</button>
+                    <hr>
+                    <button class="delete-contact-btn" onclick="deleteContact(this)">Excluir Contato</button>
+                </div>
+            </div>`;
+        
+        card.insertAdjacentHTML('beforeend', optionsHTML);
+
+        const btn = card.querySelector('.contact-options-btn');
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const menu = card.querySelector('.contact-menu');
+            document.querySelectorAll('.contact-menu').forEach(m => {
+                if (m !== menu) m.classList.remove('show');
+            });
+            menu.classList.toggle('show');
+        };
+    }
+});
 });

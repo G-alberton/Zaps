@@ -9,9 +9,16 @@
 </head>
 <body>
     <div class="app-container">
+
         <aside class="sidebar">
             <header class="sidebar-header">
-                <h3>Contatos</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>Contatos</h3>
+                    <button id="add-contact-btn" title="Novo Contato" style="background: none; border: none; cursor: pointer; font-size: 20px; color: var(--primary-color);">+ </button>
+                </div>
+                <div class="sidebar-search-container">
+                    <input type="text" id="contact-search" placeholder="pesquisa ou começar uma nova conversa">
+                </div>
             </header>
             
             <div class="contacts-list">
@@ -27,13 +34,10 @@
                     <div class="contact-avatar"></div>
                     <div class="contact-info">
                         <span class="contact-name">Paulo Gomes</span>
-                        <span clas="contact-last-msg">Obrigado por ser Bonitão ...</span>
+                        <span class="contact-last-msg">Obrigado por ser Bonitão ...</span>
                     </div>
                 </div>
-            </div>
-        </aside>
-
-        <main class="chat-area">
+            </div> </aside> <main class="chat-area">
             <header class="chat-header">
                 <div class="chat-header-info">
                     <strong>João Silva</strong> 
@@ -44,32 +48,57 @@
                 </div>
             </header>
     
-        <div class="messages-container">
-        </div>
+            <div class="messages-container">
+                </div>
 
-        <div id="drop-zone-overlay">
-            <div class="drop-zone-content">
-                <span>📁 Solte o arquivo para enviar</span>
+            <div id="drop-zone-overlay">
+                <div class="drop-zone-content">
+                    <span>📁 Solte o arquivo para enviar</span>
+                </div>
+            </div>
+
+            <footer class="chat-input-area">
+                <input type="file" id="file-input" style="display: none;" multiple>
+                <button class="attach-button" id="attach-btn">📎</button>
+
+                <div id="recording-status" style="display: none !important">
+                    <div class="red-dot"></div>
+                    <span id="recording-timer">00:00</span>
+                    <span style="margin-left: 10px; color: #666">Gravando...</span>
+                </div>
+
+                <textarea id="chat-input" placeholder="Digite uma mensagem..." rows="1"></textarea>
+                
+                <button class="audio-button">🎙️</button>
+                <button class="send-button" style="display: none;">Enviar</button>
+            </footer>
+        </main>
+    </div>
+
+    <div id="media-preview-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div id="preview-container"></div>
+            <div class="modal-footer">
+                <input type="text" id="media-caption" placeholder="Adicione uma legenda...">
+                <button id="confirm-send-btn">➔</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-contact-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-contact-modal" style="position:absolute; right: 20px; cursor: pointer; font-size: 24px;">&times;</span>
+            <h4>adicionar Novo Contato</h4>
+            <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+                <input type="text" id="new-contact-name" placeholder="Nome do Contato" style="padding:10px; border-radius:8px; border:1px solid #ddd;">
+                <input type="text" id="new-contact-number" placeholder="Número (ex: +55...)" style="padding:10px; border-radius:8px; border:1px solid #ddd;">
+                <button id="save-contact-btn" class="send-button" style="width: 100%; border-radius: 8px;">Salvar Contato</button>
             </div>
         </div>
 
-    <footer class="chat-input-area">
-        <input type="file" id="file-input" style="display: none;" multiple>
-        <button class="attach-button" id="attach-btn">📎</button>
-
-        <div id="recording-status" style="display: none !important">
-            <div class="red-dot"></div>
-            <span id="recording-timer">00:00</span>
-            <span style="margin-left: 10px; color: #666">Gravando...</span>
-        </div>
-
-        <textarea id="chat-input" placeholder="Digite uma mensagem..." rows="1"></textarea>
-        
-        <button class="audio-button">🎙️</button>
-        <button class="send-button" style="display: none;">Enviar</button>
-    </footer>
-</main>
     </div>
+
     <script src="js/script.js"></script>
 </body>
 </html>
