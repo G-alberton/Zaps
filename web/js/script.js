@@ -196,10 +196,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     chatInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = (this.scrollHeight) + 'px';
-        toggleInputButtons(this.value.trim());
-    });
+    this.style.height = 'auto'; 
+    this.style.height = (this.scrollHeight) + 'px'; 
+    toggleInputButtons(this.value.trim());
+});
 
     sendBtn.addEventListener('click', sendMessage);
     chatInput.addEventListener('keydown', (e) => {
