@@ -59,12 +59,9 @@ body, html {
 .chat-header {
     display: flex;
     justify-content: space-between;
-    padding: 10px 20px;
-    background: #fff;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
     align-items: center;
-    font-weight: 600;
+    padding: 10px 15px;
+    gap: 10px; /* Cria um espaço entre o nome e a busca */
 }
 
 .chat-search-wrapper {
@@ -73,29 +70,38 @@ body, html {
     background: #f0f2f5;
     border-radius: 20px;
     padding: 2px 10px;
+    transition: all 0.3s ease; /* Suaviza a expansão */
+    margin-left: auto; /* IMPORTANTE: Garante que ele fique na direita e cresça para a esquerda */
 }
 
-#message-search{
+#message-search {
     border: none;
     background: transparent;
     padding: 8px;
     outline: none;
-    width: 150px;
-    transition: width 0.3s;
+    width: 100%; /* Faz o input ocupar o resto do espaço do balão cinza */
 }
 
 #message-search:focus{
     width: 180px;
 }
 
-.search-button{
+.search-button {
     background: none;
     border: none;
     cursor: pointer;
-    position: absolute;
     font-size: 16px;
     color: #666;
     padding: 5px;
+    
+    /* REMOVEMOS o position: absolute */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Move o ícone para a esquerda dentro do wrapper cinza */
+    margin-right: 5px; 
+    order: -1; /* Isso joga o ícone da lupa para antes do campo de texto */
 }
 
 #search-button:hover{
@@ -751,6 +757,38 @@ body, html {
 /* --- RESPONSIVIDADE (MOBILE) --- */
 
 @media (max-width: 768px) {
+    /* ... outras regras ... */
+
+    .chat-search-wrapper {
+        min-width: 40px; 
+        width: 40px; /* Começa apenas como um círculo com a lupa */
+        justify-content: center;
+        overflow: hidden;
+    }
+    
+    /* Quando clicar na lupa/input no mobile */
+    .chat-search-wrapper:focus-within {
+        width: 200px; /* Expande para a esquerda por causa do margin-left: auto */
+        justify-content: flex-start;
+        padding: 2px 12px;
+    }
+
+    #message-search {
+        width: 0; 
+        padding: 0;
+        transition: width 0.3s ease;
+    }
+
+    .chat-search-wrapper:focus-within #message-search {
+        width: 100%;
+        padding: 8px;
+    }
+
+    /* Esconde o nome do contato se a busca for muito grande no mobile */
+    .chat-search-wrapper:focus-within ~ .chat-header-info {
+        display: none;
+    }
+
     .app-container {
         position: relative;
         overflow: hidden;
@@ -765,7 +803,6 @@ body, html {
         z-index: 100;
         transition: transform 0.3s ease;
     }
-
 
     .sidebar.hidden {
         transform: translateX(-100%);
@@ -785,11 +822,9 @@ body, html {
         padding: 10px;
     }
 
-    .chat-search-wrapper {
-        display: none; 
-    }
-
     .contact-card {
         padding: 20px 15px;
     }
 }
+
+    
