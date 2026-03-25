@@ -1,7 +1,25 @@
+let toastTimer;
+function showToast(message){
+    const toast = document.getElementById('toast');
+    clearTimeout(toastTimer);
+    toast.innerText = message;
+    toast.classList.add('show');
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 2500);
+}
+
 function handleDelete(btn) {
-    if (confirm("Deseja apagar esta mensagem?")) {
-        btn.closest('.message-row').remove();
-    }
+    const row = btn.closest('.message-row');
+    showCustomModal(
+        "Apagar Mensagem?",
+        "Esta ação não pode ser desfeita.",
+        false,
+        'DELETE_MSG',
+        row,
+        true
+    );
 }
 
 function handleCopy(btn) {
@@ -10,8 +28,8 @@ function handleCopy(btn) {
     if (textElement) {
         const textToCopy = textElement.innerText;
         navigator.clipboard.writeText(textToCopy).then(() => {
-            alert("Copiado!");
-            bubble.querySelector('.message-menu').classList.remove('show');
+            showToast("Mensagem Copiada!");
+            document.querySelectorAll('.message-menu').forEach(m => m.classList.remove('show'));
         });
     }
 }
@@ -100,6 +118,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } 
         else if (modalAction === 'CLEAR') {
             document.querySelector('.messages-container').innerHTML = "";
+        }
+        else if (modalAction === 'DELETE_MSG'){
+            if (currentTarget) currentTarget.remove();
         }
 
         modal.classList.remove('active');
@@ -351,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (isImage){
                 const imageURL = URL.createObjectURL(file);
-                sendMediaMessage(imageURL, time, 'image');
+                sendMediaMessage(imageUR0L, time, 'image');
             } else { 
                 sendMediaMessage(file.name, time, 'file');
             }
