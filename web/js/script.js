@@ -16,39 +16,44 @@ function handleCopy(btn) {
     }
 }
 
-function editContact(btn) {
-    const card = btn.closest('.contact-card');
-    const nameSpan = card.querySelector('.contact-name');
-    const currentName = nameSpan.innerText;
-    const newName = prompt("Digite o novo nome:", currentName);
-    
-    if (newName && newName.trim() !== "") {
-        nameSpan.innerText = newName;
-        if (card.classList.contains('active')) {
-            const chatHeaderName = document.querySelector('.chat-header-info strong');
-            if (chatHeaderName) chatHeaderName.innerText = newName;
-        }
-    }
+let modalAction = null;
+let currentTarget = null;
+
+function showCustomModal(title, description, isInput, action, target, isDanger = false){
+    const modal = document.getElementById('custom-modal');
+    const input = document.getElementById('modal-input');
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+
+    document.getElementById('modal-title').innerText = title;
+    document.getElementById('modal-description').innerText = description;
+
+    input.style.display = isInput ? 'block' : 'none';
+    if(isInput) input.value = target.querySelector('.contact-name')?.innerText || "";
+
+    confirmBtn.className = isDanger ? 'btn-danger' : '';
+    confirmBtn.style.background = isDanger ? '#ff4d4d' : 'var(--primary-color)';
+
+    modalAction = action;
+    currentTarget = target;
+    modal.classList.add('active');
 }
 
-function deleteContact(btn) {
-    if (confirm("Tem certeza que deseja excluir este contato?")) {
-        const card = btn.closest('.contact-card');
-        card.remove();
-        document.querySelector('.messages-container').innerHTML = "";
-        document.querySelector('.chat-header-info strong').innerText = "Selecione um contato";
-    }
+function editContact(btn){
+    showCustomModal("Editar Nome", "Digite o novo nome do contato:", true, 'EDIT', btn.closest('.contact-card'));
+}
+
+function deleteContact(btn){
+    showCustomModal("Excluir Contato", "Tem certeza? Isso apagará o contato e as mensagens.", false, 'DELETE', btn.closest('.contact-card'), true);
 }
 
 function clearChat(btn) {
-    if (confirm("Deseja apagar todas as mensagens desta conversa?")) {
-        const messagesContainer = document.querySelector('.messages-container');
-        if (messagesContainer) messagesContainer.innerHTML = "";
-    }
+    showCustomModal("Limpar Conversa", "Deseja apagar todas as mensagens?", false, 'CLEAR', null, true);
 }
 
 function handleReply(btn) { console.log("Responder clicado"); }
 
+
+/*Aqui é o DOM*/ 
 document.addEventListener('DOMContentLoaded', () => {
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.querySelector('.send-button');
@@ -71,6 +76,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const contactsList = document.querySelector('.contacts-list');
     const toggleSidebarBtn = document.getElementById('toggle-sidebar');
     const sidebar = document.querySelector('.sidebar');
+    const modal = document.getElementById('custom-modal');
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+    const cancelBtn = document.getElementById('modal-cancel-btn');
+    const input = document.getElementById('modal-input');
+
+    cancelBtn.onclick = () => modal.classList.remove('active');
+
+    confirmBtn.onclick = () => {
+        if (modalAction === 'EDIT') {
+            const newName = input.value.trim();
+            if (newName) {
+                currentTarget.querySelector('.contact-name').innerText = newName;
+                if (currentTarget.classList.contains('active')) {
+                    document.querySelector('.chat-header-info strong').innerText = newName;
+                }
+            }
+        } 
+        else if (modalAction === 'DELETE') {
+            currentTarget.remove();
+            document.querySelector('.messages-container').innerHTML = "";
+            document.querySelector('.chat-header-info strong').innerText = "Selecione um contato";
+        } 
+        else if (modalAction === 'CLEAR') {
+            document.querySelector('.messages-container').innerHTML = "";
+        }
+
+        modal.classList.remove('active');
+        document.querySelectorAll('.contact-menu').forEach(m => m.classList.remove('show'));
+    };
     
     let timerInterval;
     let seconds = 0;
@@ -89,8 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createMessageHTML(content, time, type = 'text') {
         const isAudio = type === 'audio';
-        const playSymbol = '\u25B6\uFE0E'; // Isso força a renderização como texto simples
-    const pauseSymbol = '\u23F8\uFE0E'; // Símbolo de pausa textual, se precisar (U+23F8)
+        const playSymbol = '\u25B6\uFE0E'; 
+    const pauseSymbol = '\u23F8\uFE0E'; 
 
     return `
         <div class="message-bubble ${isAudio ? 'audio-bubble' : ''}">
@@ -178,15 +212,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const finalTime = timerDisplay.innerText;
     clearInterval(timerInterval);
 
-    // Só envia se houver tempo gravado
+    
     if (seconds > 0) {
         const now = new Date();
         const time = now.getHours() + ":" + now.getMinutes().toString().padStart(2, '0');
         
         const messageRow = document.createElement('div');
-        messageRow.classList.add('message-row', 'message-sent'); // Garante que vai para a DIREITA
+        messageRow.classList.add('message-row', 'message-sent'); 
 
-        // Usamos a sua função createMessageHTML para manter os menus de apagar/copiar
+        
         messageRow.innerHTML = createMessageHTML(finalTime, time, 'audio');
         
         messagesContainer.appendChild(messageRow);

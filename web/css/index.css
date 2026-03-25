@@ -723,12 +723,18 @@ body, html {
 
 .modal-content {
     background-color: white;
-    padding: 20px;
-    border-radius: 15px;
-    width: 90%;
-    max-width: 500px;
-    position: relative;
+    padding: 25px;
+    border-radius: 20px;
+    width: 85%;
+    max-width: 400px;
+    position: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
+
+#modal-title { margin-bottom: 10px; font-size: 1.2rem;}
+#modal-description { color: var(--text-muted); font-size: 14px; margin-bottom: 5px;}
+
+.btn-danger{ background-color: #ff4d4d !important; color: white !important;}
 
 .main-container {
     display: flex;
