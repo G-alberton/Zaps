@@ -1,4 +1,23 @@
+let chatHistories = JSON.parse(localStorage.getItem('chatHistories')) || {};
+let savedContacts = JSON.parse(localStorage.getItem('savedContacts')) || [];
+let activeContact = null;
 let toastTimer;
+
+function saveToLocalStorage(contactName, content, time, type, side){
+    if (!chatHistories[contactName]){
+        chatHistories[contactName] = [];
+    }
+
+    chatHistories[contactName].push({
+        content: content,
+        time: time,
+        type: type,
+        side: side
+    });
+
+    localStorage.setItem('chatHistories', JSON.stringify(chatHistories));
+}
+
 function showToast(message){
     const toast = document.getElementById('toast');
     clearTimeout(toastTimer);
@@ -99,6 +118,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelBtn = document.getElementById('modal-cancel-btn');
     const input = document.getElementById('modal-input');
 
+    if (savedContacts.length > 0){
+        savedContacts.forEach(contact => {
+            const newCard = createContactCardHTML(contact.name, contact.lastMsg || "Nova conversa...");
+            contactsList.appendChild(newCard);
+        });
+    }
+
     cancelBtn.onclick = () => modal.classList.remove('active');
 
     confirmBtn.onclick = () => {
@@ -112,9 +138,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } 
         else if (modalAction === 'DELETE') {
+            const nametoDelete = currentTarget.querySelector('.contact-name').innerText;
+            savedContacts = savedContacts.filter(c => c.name !== nametoDelete);
+            localStorage.setItem('savedContacts', JSON.stringify(savedContacts));
+            delete chatHistories[nametoDelete];
+            localStorage.setItem('chatHistories', JSON.stringify(chatHistories));
             currentTarget.remove();
             document.querySelector('.messages-container').innerHTML = "";
             document.querySelector('.chat-header-info strong').innerText = "Selecione um contato";
+            activeContact = null;
         } 
         else if (modalAction === 'CLEAR') {
             document.querySelector('.messages-container').innerHTML = "";
@@ -180,6 +212,9 @@ document.addEventListener('DOMContentLoaded', () => {
             messageRow.innerHTML = createMessageHTML(text, time, 'text');
             
             messagesContainer.appendChild(messageRow);
+            if (activeContact) {
+                saveToLocalStorage(activeContact, text, time, 'text', 'sent');
+            }
             chatInput.value = "";
             chatInput.style.height = 'auto';
             toggleInputButtons("");
@@ -245,6 +280,9 @@ document.addEventListener('DOMContentLoaded', () => {
         messageRow.innerHTML = createMessageHTML(finalTime, time, 'audio');
         
         messagesContainer.appendChild(messageRow);
+        if (activeContact){
+            saveToLocalStorage(activeContact, finalTime, time, 'audio', 'sent');
+        }
         scrollToBottom();
     }
 }
@@ -396,9 +434,19 @@ document.addEventListener('DOMContentLoaded', () => {
             card.classList.add('active');
 
             const name = card.querySelector('.contact-name').innerText;
+            activeContact = name;
             chatHeaderName.innerText = name;
-
             messagesContainer.innerHTML = "";
+
+            if (chatHistories[name]) {
+                chatHistories[name].forEach(msg => {
+                    const row = document.createElement('div');
+                    row.classList.add('message-row', msg.side === 'sent' ? 'message-sent' : 'message-received');
+                    row.innerHTML = createMessageHTML(msg.content, msg.time, msg.type);
+                    messagesContainer.appendChild(row);
+                });
+                scrollToBottom();
+            }
         });
     });
 
@@ -419,22 +467,28 @@ document.addEventListener('DOMContentLoaded', () => {
     closeContactModal.onclick = () => addContactModal.style.display = 'none';
 
     function setupContactClick(card) {
-    card.addEventListener('click', () => {
-        
-        document.querySelectorAll('.contact-card').forEach(c => c.classList.remove('active'));
-        
-        card.classList.add('active');
-        
-        const nameElement = card.querySelector('.contact-name');
-        if (nameElement && chatHeaderName) {
-            chatHeaderName.innerText = nameElement.innerText;
-        }
-        
-        if (messagesContainer) {
-            messagesContainer.innerHTML = "";
-        }
-    });
-}
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.contact-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            
+            const name = card.querySelector('.contact-name').innerText;
+            activeContact = name;
+            chatHeaderName.innerText = name;
+            messagesContainer.innerHTML = ""; 
+
+            if (chatHistories[name]) {
+                chatHistories[name].forEach(msg => {
+                    const row = document.createElement('div');
+                    row.classList.add('message-row', msg.side === 'sent' ? 'message-sent' : 'message-received');
+                    row.innerHTML = createMessageHTML(msg.content, msg.time, msg.type);
+                    messagesContainer.appendChild(row);
+                });
+                scrollToBottom();
+            }
+            
+            if (window.innerWidth <= 768) sidebar.classList.add('hidden');
+        });
+    }
 
 function createContactCardHTML(name, lastMsg = "Nova conversa...") {
     const card = document.createElement('div');
@@ -479,10 +533,12 @@ function createContactCardHTML(name, lastMsg = "Nova conversa...") {
         if (name) {
             const newCard = createContactCardHTML(name);
             contactsList.prepend(newCard); 
-            
+            savedContacts.push({name: name, lastMsg: "Nova conversa..."});
+            localStorage.setItem('savedContacts', JSON.stringify(savedContacts));
+
             document.getElementById('new-contact-name').value = '';
-            document.getElementById('new-contact-number').value = '';
             addContactModal.style.display = 'none';
+            showToast("Contato salvo com sucesso!");
         }
     };
 
