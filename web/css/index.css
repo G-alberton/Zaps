@@ -823,14 +823,14 @@ body, html {
 
     .chat-search-wrapper {
         min-width: 40px; 
-        width: 40px; /* Começa apenas como um círculo com a lupa */
+        width: 40px; 
         justify-content: center;
         overflow: hidden;
     }
     
-    /* Quando clicar na lupa/input no mobile */
+    
     .chat-search-wrapper:focus-within {
-        width: 200px; /* Expande para a esquerda por causa do margin-left: auto */
+        width: 200px; 
         justify-content: flex-start;
         padding: 2px 12px;
     }
@@ -846,7 +846,7 @@ body, html {
         padding: 8px;
     }
 
-    /* Esconde o nome do contato se a busca for muito grande no mobile */
+    
     .chat-search-wrapper:focus-within ~ .chat-header-info {
         display: none;
     }
