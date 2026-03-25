@@ -61,7 +61,7 @@ body, html {
     justify-content: space-between;
     align-items: center;
     padding: 10px 15px;
-    gap: 10px; /* Cria um espaço entre o nome e a busca */
+    gap: 10px; 
 }
 
 .chat-search-wrapper {
@@ -70,8 +70,8 @@ body, html {
     background: #f0f2f5;
     border-radius: 20px;
     padding: 2px 10px;
-    transition: all 0.3s ease; /* Suaviza a expansão */
-    margin-left: auto; /* IMPORTANTE: Garante que ele fique na direita e cresça para a esquerda */
+    transition: all 0.3s ease; 
+    margin-left: auto; 
 }
 
 #message-search {
@@ -79,7 +79,7 @@ body, html {
     background: transparent;
     padding: 8px;
     outline: none;
-    width: 100%; /* Faz o input ocupar o resto do espaço do balão cinza */
+    width: 100%; 
 }
 
 #message-search:focus{
@@ -94,14 +94,12 @@ body, html {
     color: #666;
     padding: 5px;
     
-    /* REMOVEMOS o position: absolute */
     display: flex;
     align-items: center;
     justify-content: center;
     
-    /* Move o ícone para a esquerda dentro do wrapper cinza */
     margin-right: 5px; 
-    order: -1; /* Isso joga o ícone da lupa para antes do campo de texto */
+    order: -1; 
 }
 
 #search-button:hover{
@@ -166,6 +164,11 @@ body, html {
     font-size: 20px; 
     color: white;
     flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .audio-button:hover{
@@ -757,7 +760,31 @@ body, html {
 /* --- RESPONSIVIDADE (MOBILE) --- */
 
 @media (max-width: 768px) {
-    /* ... outras regras ... */
+
+    #recording-status{
+        position: absolute;
+        left: 10px;
+        right: 60px;
+        bottom: 10px;
+        height: 45px;
+        z-index: 5;
+        background: white;
+        display: none;
+        align-items: center;
+        border-radius: 20px;
+        padding: 0 15px;
+    }
+    
+    .chat-input-area {
+        position: relative;
+        padding: 10px;
+    }
+
+    .audio-button {
+        position: relative;
+        z-index: 10;
+        flex-shrink: 0;
+    }
 
     .chat-search-wrapper {
         min-width: 40px; 

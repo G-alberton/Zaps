@@ -79,36 +79,38 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleSidebarBtn.onclick = () => {
         sidebar.classList.toggle('hidden');
         
-        // Opcional: Mudar o ícone do botão
         if (sidebar.classList.contains('hidden')) {
-            toggleSidebarBtn.innerText = "➡️"; // Seta para voltar
+            toggleSidebarBtn.innerText = "➡️"; 
         } else {
-            toggleSidebarBtn.innerText = "☰"; // Menu normal
+            toggleSidebarBtn.innerText = "☰"; 
         }
     };
     }
 
     function createMessageHTML(content, time, type = 'text') {
         const isAudio = type === 'audio';
-        return `
-            <div class="message-bubble ${isAudio ? 'audio-bubble' : ''}">
-                <div class="message-options-btn"><span>&#9013;</span></div>
-                <div class="message-menu">
-                    ${!isAudio ? '<button onclick="handleReply(this)">Responder</button>' : ''}
-                    ${!isAudio ? '<button onclick="handleCopy(this)">Copiar</button>' : ''}
-                    <button class="delete-btn" onclick="handleDelete(this)">Apagar</button>
-                </div>
-                ${isAudio ? `
-                    <div class="audio-player-container">
-                        <button class="audio-play-btn">▶</button>
-                        <div class="audio-controls">
-                            <div class="audio-waveform"><div class="audio-progress"></div></div>
-                            <div class="audio-meta"><span class="audio-duration">${content}</span></div>
-                        </div>
-                    </div>
-                ` : `<div class="message-text">${content}</div>`}
-                <span class="message-time">${time}</span>
+        const playSymbol = '\u25B6\uFE0E'; // Isso força a renderização como texto simples
+    const pauseSymbol = '\u23F8\uFE0E'; // Símbolo de pausa textual, se precisar (U+23F8)
+
+    return `
+        <div class="message-bubble ${isAudio ? 'audio-bubble' : ''}">
+            <div class="message-options-btn"><span>&#9013;</span></div>
+            <div class="message-menu">
+                ${!isAudio ? '<button onclick="handleReply(this)">Responder</button>' : ''}
+                ${!isAudio ? '<button onclick="handleCopy(this)">Copiar</button>' : ''}
+                <button class="delete-btn" onclick="handleDelete(this)">Apagar</button>
             </div>
+            ${isAudio ? `
+                <div class="audio-player-container">
+                    <button class="audio-play-btn">${playSymbol}</button>
+                    <div class="audio-controls">
+                        <div class="audio-waveform"><div class="audio-progress"></div></div>
+                        <div class="audio-meta"><span class="audio-duration">${content}</span></div>
+                    </div>
+                </div>
+            ` : `<div class="message-text">${content}</div>`}
+            <span class="message-time">${time}</span>
+        </div>
         `;
     }
 
@@ -156,34 +158,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1000);
     }
 
-    audioBtn.addEventListener('mousedown', (e) => {
-        e.preventDefault();
+    function startRec(e){
+        if (e.cancelable) e.preventDefault();
         audioBtn.classList.add('recording');
         audioBtn.innerHTML = "🛑";
-        chatInput.style.display = 'none';
+        chatInput.style.visibility = 'hidden';
         recordingStatus.setAttribute('style', 'display: flex !important');
         startTimer();
-    });
+    }
 
-    audioBtn.addEventListener('mouseup', () => {
-        audioBtn.classList.remove('recording');
-        audioBtn.innerHTML = "🎙️";
-        chatInput.style.display = 'block';
-        recordingStatus.setAttribute('style', 'display: none !important');
+    function stopRec() {
+    if (!audioBtn.classList.contains('recording')) return;
+
+    audioBtn.classList.remove('recording');
+    audioBtn.innerHTML = "🎙️";
+    chatInput.style.visibility = 'visible';
+    recordingStatus.setAttribute('style', 'display: none !important');
+
+    const finalTime = timerDisplay.innerText;
+    clearInterval(timerInterval);
+
+    // Só envia se houver tempo gravado
+    if (seconds > 0) {
+        const now = new Date();
+        const time = now.getHours() + ":" + now.getMinutes().toString().padStart(2, '0');
         
-        const finalTime = timerDisplay.innerText;
-        clearInterval(timerInterval);
+        const messageRow = document.createElement('div');
+        messageRow.classList.add('message-row', 'message-sent'); // Garante que vai para a DIREITA
+
+        // Usamos a sua função createMessageHTML para manter os menus de apagar/copiar
+        messageRow.innerHTML = createMessageHTML(finalTime, time, 'audio');
         
-        if (seconds > 0) {
-            const now = new Date();
-            const time = now.getHours() + ":" + now.getMinutes().toString().padStart(2, '0');
-            const messageRow = document.createElement('div');
-            messageRow.classList.add('message-row', 'message-sent');
-            messageRow.innerHTML = createMessageHTML(finalTime, time, 'audio');
-            messagesContainer.appendChild(messageRow);
-            scrollToBottom();
-        }
-    });
+        messagesContainer.appendChild(messageRow);
+        scrollToBottom();
+    }
+}
+
+    audioBtn.addEventListener('mousedown', startRec);
+    window.addEventListener('mouseup', stopRec);
+
+    audioBtn.addEventListener('touchstart', startRec, {passive: false});
+    audioBtn.addEventListener('touchend', stopRec);
 
     function toggleInputButtons(text) {
         const hasText = text.length > 0;
