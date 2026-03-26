@@ -792,6 +792,26 @@ body, html {
         transform 0.5s ease;
 }
 
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-secondary {
+    background-color: #f0f0f0;
+    color: #333;
+    border: 1px solid #ccc;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background-color: #e0e0e0;
+}
+
 /* --- RESPONSIVIDADE (MOBILE) --- */
 
 @media (max-width: 768px) {

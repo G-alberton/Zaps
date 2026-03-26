@@ -79,8 +79,9 @@
             <h4>adicionar Novo Contato</h4>
             <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
                 <input type="text" id="new-contact-name" placeholder="Nome do Contato" style="padding:10px; border-radius:8px; border:1px solid #ddd;">
-                <input type="text" id="new-contact-number" placeholder="Número (ex: +55...)" style="padding:10px; border-radius:8px; border:1px solid #ddd;">
+                <input type="text" id="new-contact-number" placeholder="Número (ex: 11999998888)" maxlength="15" style="padding:10px; border-radius:8px; border:1px solid #ddd;">
                 <button id="save-contact-btn" class="send-button" style="width: 100%; border-radius: 8px;">Salvar Contato</button>
+                <button id="cancel-add-contact-btn" class="btn-secondary">Cancelar</button>
             </div>
         </div>
     </div>
