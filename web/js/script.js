@@ -6,6 +6,7 @@ let modalAction = null;
 let currentTarget = null;
 let timerInterval;
 let seconds = 0;
+let pendingFile = null;
 
 function saveToLocalStorage(contactName, content, time, type, side){
     if (!chatHistories[contactName]){
@@ -360,8 +361,20 @@ function saveNewContact() {
 
 function createMessageHTML(content, time, type = 'text') {
     const isAudio = type === 'audio';
+    const isImage = type === 'image';
+    const isFile = type === 'file';
+    const isSent = type === 'sent';
     const playSymbol = '\u25B6\uFE0E'; 
-    const pauseSymbol = '\u23F8\uFE0E'; 
+    const pauseSymbol = '\u23F8\uFE0E';
+    
+    const checks = isSent ? '<span class="message-checks">✓✓</span>' : '';
+    const timeHTML = `<span class="message-time">${time} ${checks}</span>`;
+
+    let actionTopBat = '';
+
+    if (isImage || isFile){
+        //parou aqui
+    }
 
     return `
         <div class="message-bubble ${isAudio ? 'audio-bubble' : ''}">
@@ -388,7 +401,23 @@ function createMessageHTML(content, time, type = 'text') {
 function sendMessage() {
     const chatInput = document.getElementById('chat-input');
     const text = chatInput.value.trim();
-    if (text !== "") {
+    const now = new Date();
+    const time = now.getHours() + ":" + now.getMinutes().toString.padStart(2, "0")
+    if (pendingFile) {
+        const isImage = pendingFile.type.startsWith('image/');
+        if (isImage) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                sendMediaWithCaption(e.target.result, text, time, 'image');
+            };
+            reader.readAsDataURL(pendingFile);
+        } else {
+            sendMediaWithCaption(pendingFile.name, text, time, 'file');
+        }
+
+        pendingFile = null;
+        chatInput.placeholder = "Digite uma Mensagem";
+    } else if (text !== "") {
         const now = new Date();
         const time = now.getHours() + ":" + now.getMinutes().toString().padStart(2, '0');
         const messagesContainer = document.querySelector('.messages-container');
@@ -530,17 +559,16 @@ function handleContactSearch(e) {
 }
 
 function handleFiles(files) {
-    Array.from(files).forEach(file => {
-        const isImage = file.type.startsWith('image/');
-        const time = new Date().getHours() + ":" + new Date().getMinutes().toString().padStart(2, '0');
+    const file = files[0];
+    if (!file) return;
 
-        if (isImage){
-            const imageURL = URL.createObjectURL(file);
-            sendMediaMessage(imageURL, time, 'image');
-        } else { 
-            sendMediaMessage(file.name, time, 'file');
-        }
-    });
+    pendingFile = file;
+
+    const chatInput = file;
+    chatInput.placeholder = "Adicione uma legenda";
+    chatInput.classList.add('has-pending-file');
+
+    chatInput.focus
 }
 
 function sendMediaMessage(content, time, type) {

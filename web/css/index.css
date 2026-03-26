@@ -812,6 +812,20 @@ body, html {
     background-color: #e0e0e0;
 }
 
+.message-caption {
+    padding: 8px;
+    color: #333;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    background: white; /* Ou a cor do balão */
+}
+.message-time.overlay {
+    /* Ajuste para não ficar em cima do texto da legenda */
+    position: relative; 
+    float: right;
+    margin-top: -15px;
+}
+
 /* --- RESPONSIVIDADE (MOBILE) --- */
 
 @media (max-width: 768px) {
