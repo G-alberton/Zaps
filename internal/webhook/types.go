@@ -1,40 +1,63 @@
 package webhook
 
 type Message struct {
-	From string `json:"from"`
-	Type string `json:"type"`
+	ID        string `json:"id"`
+	From      string `json:"from"`
+	Type      string `json:"type"`
+	Timestamp string `json:"timestamp"`
 
-	Text *struct {
-		Body string `json:"body"`
-	} `json:"text,omitempty"`
+	Text     *TextMessage     `json:"text,omitempty"`
+	Image    *MediaMessage    `json:"image,omitempty"`
+	Audio    *MediaMessage    `json:"audio,omitempty"`
+	Document *MediaMessage    `json:"document,omitempty"`
+	Video    *MediaMessage    `json:"video,omitempty"`
+	Sticker  *MediaMessage    `json:"sticker,omitempty"`
+	Location *LocationMessage `json:"location,omitempty"`
 
-	Image *struct {
-		ID string `json:"id"`
-	} `json:"image,omitempty"`
-
-	Audio *struct {
-		ID string `json:"id"`
-	} `json:"audio,omitempty"`
-
-	Document *struct {
-		ID string `json:"id"`
-	} `json:"document,omitempty"`
+	Context *ContextMessage `json:"context,omitempty"`
 }
 
-// evento que aconteceu no processo de receber a mensagem
-type Event struct {
-	Entry []struct {
-		Changes []struct {
-			Value struct {
-				Messages []Message `json:"messages"`
+type TextMessage struct {
+	Body string `json:"body"`
+}
 
-				Contacts []struct {
-					Profile struct {
-						Name string `json:"name"`
-					} `json:"profile"`
-					WaID string `json:"wa_id"`
-				} `json:"contacts"`
-			} `json:"value"`
-		} `json:"changes"`
-	} `json:"entry"`
+type MediaMessage struct {
+	ID string `json:"id"`
+}
+
+type LocationMessage struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Name      string  `json:"name"`
+	Address   string  `json:"address"`
+}
+
+type ContextMessage struct {
+	ID string `json:"id"`
+}
+
+type Event struct {
+	Entry []Entry `json:"entry"`
+}
+
+type Entry struct {
+	Changes []Change `json:"changes"`
+}
+
+type Change struct {
+	Value Value `json:"value"`
+}
+
+type Value struct {
+	Messages []Message `json:"messages"`
+	Contacts []Contact `json:"contacts"`
+}
+
+type Contact struct {
+	Profile Profile `json:"profile"`
+	WaID    string  `json:"wa_id"`
+}
+
+type Profile struct {
+	Name string `json:"name"`
 }
