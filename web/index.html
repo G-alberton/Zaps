@@ -66,9 +66,11 @@
         <div class="modal-content">
             <span class="close-modal">&times;</span>
             <div id="preview-container"></div>
-            <div class="modal-footer">
-                <input type="text" id="media-caption" placeholder="Adicione uma legenda...">
-                <button id="confirm-send-btn">➔</button>
+            <div class="caption-container">
+                <input type="text" id="media-caption" placeholder="Adicione uma legenda..." autocomplete="off">
+                <button id="confirm-send-btn" class="send-media-fab">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"></path></svg>
+                </button>
             </div>
         </div>
     </div>

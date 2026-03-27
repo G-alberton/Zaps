@@ -8,7 +8,110 @@ let timerInterval;
 let seconds = 0;
 let pendingFile = null;
 
-function saveToLocalStorage(contactName, content, time, type, side){
+function saveNewContact() {
+    const nameInput = document.getElementById('new-contact-name');
+    const numberInput = document.getElementById('new-contact-number');
+    
+    const name = nameInput.value.trim();
+    const rawNumber = numberInput.value.trim();
+    const id = cleaNumber(rawNumber);
+
+    if(name && id) {
+        // 1. Verificação de duplicados
+        const exist = savedContacts.some(c => c.id === id);
+        if (exist) {
+            showToast("Este número já está cadastrado!");
+            return;
+        }
+
+        // 2. Criação do objeto (avatarUrl começa vazio para a API preencher depois)
+        const contactData = {
+            id: id, 
+            name: name, 
+            lastMsg: "Nova conversa...",
+            avatarUrl: "" 
+        };
+
+        // 3. Renderização na barra lateral
+        // Passamos contactData.avatarUrl (vazio) para que createContactCardHTML use as iniciais
+        const newCard = createContactCardHTML(contactData.name, contactData.lastMsg, contactData.id, contactData.avatarUrl);
+        document.querySelector('.contacts-list').prepend(newCard);
+
+        // 4. Persistência no LocalStorage
+        savedContacts.unshift(contactData);
+        localStorage.setItem('savedContacts', JSON.stringify(savedContacts));
+
+        // 5. Reset da UI
+        nameInput.value = '';
+        numberInput.value = '';
+        document.getElementById('add-contact-modal').style.display = 'none';
+        showToast("Contato salvo!");
+
+        // 6. GATILHO DA API (Opcional agora, obrigatório depois)
+        // Aqui é onde você chamaria sua função: fetchWhatsAppAvatar(id);
+        
+    } else {
+        showToast("Por favor, insira um nome e um número válido.");
+    }
+}
+function getInitials(name) {
+    if (!name) return "??";
+    return name
+        .split(' ')
+        .map(word => word[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+}
+
+function convertToBase64(file){
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+function renderAndSave(content, time, type, side, caption) {
+    const container = document.querySelector('.messages-container');
+    const row = document.createElement('div');
+    row.classList.add('message-row', `message-${side}`);
+    
+    // Usa sua função createMessageHTML que já configuramos
+    row.innerHTML = createMessageHTML(content, time, type, side, caption);
+    container.appendChild(row);
+    
+    if (activeContact) {
+        // Salva no LocalStorage com o novo esquema
+        saveToLocalStorage(activeContact, content, time, type, side, caption);
+        // Atualiza a barra lateral (se for imagem/arquivo, mostra o nome ou ícone)
+        const lastMsgText = type === 'text' ? content : (type === 'image' ? '📷 Foto' : '📂 Arquivo');
+        updateLastMsgDisplay(activeContact, lastMsgText, type);
+    }
+    scrollToBottom();
+}
+
+function saveToLocalStorage(contactId, content = "", time = "", type = "text", side = "sent", caption = "") {
+    if (!contactId) return;
+
+    if(!chatHistories[contactId]) {
+        chatHistories[contactId] = [];
+    }
+
+    const messagePayload = {
+        content: content ?? "",
+        time: time ?? "00:00",
+        type: type ?? "text",
+        side: side ?? "sent",
+        caption: caption ?? ""
+    };
+
+    chatHistories[contactId].push(messagePayload);
+    localStorage.setItem('chatHistories', JSON.stringify(chatHistories))
+}
+
+/*function saveToLocalStorage(contactName, content, time, type, side){
     if (!chatHistories[contactName]){
         chatHistories[contactName] = [];
     }
@@ -21,7 +124,7 @@ function saveToLocalStorage(contactName, content, time, type, side){
     });
 
     localStorage.setItem('chatHistories', JSON.stringify(chatHistories));
-}
+}*/
 
 function showToast(message){
     const toast = document.getElementById('toast');
@@ -139,6 +242,22 @@ document.addEventListener('DOMContentLoaded', () => {
     window.deleteContact = deleteContact;
     window.clearChat = clearChat;
     window.handleReply = handleReply;
+
+    if (elements.saveContactBtn) {
+        // Apenas apontamos para a função que está lá em cima
+        elements.saveContactBtn.onclick = saveNewContact;
+    }
+
+    // Carregamento inicial de contatos
+    if (savedContacts.length > 0){
+        savedContacts.forEach(contact => {
+            // Ajuste na chamada para passar o avatarUrl também
+            const newCard = createContactCardHTML(contact.name, contact.lastMsg, contact.id, contact.avatarUrl);
+            elements.contactsList.appendChild(newCard);
+        });
+    }
+
+    setupEventListeners(elements);
 });
 
 function setupEventListeners(elements) {
@@ -206,6 +325,17 @@ function setupEventListeners(elements) {
 
     addContactBtn.onclick = () => addContactModal.style.display = 'flex';
     closeContactModal.onclick = () => addContactModal.style.display = 'none';
+    const closeModalBtn = document.querySelector('.close-modal');
+    if (closeModalBtn) {
+        closeModalBtn.onclick = () => {
+            const mediaModal = document.getElementById('media-preview-modal');
+            mediaModal.style.display = 'none';
+            mediaModal.classList.remove('active');
+            pendingFile = null; // Limpa o arquivo pendente se o usuário cancelar
+        };
+    }
+    
+
     saveContactBtn.onclick = saveNewContact;
 
     document.addEventListener('click', handleMenuClicks);
@@ -248,13 +378,22 @@ function handleModalConfirm() {
     document.querySelectorAll('.contact-menu, .message-menu').forEach(m => m.classList.remove('show'));
 }
 
-function createContactCardHTML(name, lastMsg, id) {
+function createContactCardHTML(name, lastMsg, id, avatarUrl) {
     const card = document.createElement('div');
     card.classList.add('contact-card');
     card.dataset.id = id;
 
+    const initials = getInitials(name);
+    
+    // Lógica de fallback: se a imagem falhar ou não existir, o CSS mostra as iniciais
+    const imgHTML = avatarUrl 
+        ? `<img src="${avatarUrl}" onerror="this.style.display='none'">` 
+        : '';
+
     card.innerHTML = `
-        <div class="contact-avatar"></div>
+        <div class="contact-avatar" data-initials="${initials}">
+            ${imgHTML}
+        </div>
         <div class="contact-info">
             <span class="contact-name">${name}</span>
             <span class="contact-last-msg">${lastMsg}</span>
@@ -270,8 +409,10 @@ function createContactCardHTML(name, lastMsg, id) {
         </div>
     `;
 
+    // Evento de clique para abrir a conversa
     card.addEventListener('click', (e) => handleContactClick(card, name, id, e));
     
+    // Lógica do menu de opções (seu código original preservado)
     const menuBtn = card.querySelector('.contact-options-btn');
     menuBtn.onclick = (e) => {
         e.stopPropagation();
@@ -288,11 +429,22 @@ function createContactCardHTML(name, lastMsg, id) {
 function handleContactClick(card, name, id, e) {
     if (e.target.closest('.contact-menu')) return;
 
+    // Remove active de todos e adiciona no clicado
     document.querySelectorAll('.contact-card').forEach(c => c.classList.remove('active'));
     card.classList.add('active');
 
     activeContact = id;
+    
+    // Busca os dados completos do contato para pegar o avatarUrl
+    const contact = savedContacts.find(c => c.id === id);
+    
+    // Atualiza o Nome no Header
     document.querySelector('.chat-header-info strong').innerText = name;
+
+    // --- NOVO: Atualiza a foto no Header ---
+    updateHeaderAvatar(contact?.avatarUrl, name);
+    // ----------------------------------------
+
     const messagesContainer = document.querySelector('.messages-container');
     messagesContainer.innerHTML = "";
 
@@ -300,7 +452,7 @@ function handleContactClick(card, name, id, e) {
         chatHistories[id].forEach(msg => {
             const row = document.createElement('div');
             row.classList.add('message-row', msg.side === 'sent' ? 'message-sent' : 'message-received');
-            row.innerHTML = createMessageHTML(msg.content, msg.time, msg.type);
+            row.innerHTML = createMessageHTML(msg.content, msg.time, msg.type, msg.side, msg.caption);
             messagesContainer.appendChild(row);
         });
         scrollToBottom();
@@ -308,6 +460,21 @@ function handleContactClick(card, name, id, e) {
 
     if (window.innerWidth <= 768) {
         document.querySelector('.sidebar')?.classList.add('hidden');
+    }
+}
+
+// Função auxiliar para atualizar o avatar do topo (coloque fora do DOMContentLoaded)
+function updateHeaderAvatar(url, name) {
+    const headerAvatarContainer = document.querySelector('.chat-header .contact-avatar'); 
+    if (!headerAvatarContainer) return;
+
+    const initials = getInitials(name);
+    headerAvatarContainer.setAttribute('data-initials', initials);
+    
+    if (url) {
+        headerAvatarContainer.innerHTML = `<img src="${url}" onerror="this.style.display='none'">`;
+    } else {
+        headerAvatarContainer.innerHTML = '';
     }
 }
 
@@ -330,36 +497,65 @@ function cleaNumber(num) {
     return num.toString().replace(/\D/g, '');
 }
 
-function saveNewContact() {
-    const nameInput = document.getElementById('new-contact-name');
-    const numberInput = document.getElementById('new-contact-number');
-    const name = nameInput.value.trim();
-    const rawNumber = numberInput.value.trim();
-    const id = cleaNumber(rawNumber);
+function createMessageHTML(content = "", time = "", type = "text", side = "sent", caption = "") {
+    const isSent = side === 'sent';
+    const safeContent =  content ?? "";
+    const safeCaption = caption ?? "";
+    const checks = isSent ? '<span class="message-checks">✓✓</span>' : '';
 
-    if(name && id) {
-        const exist = savedContacts.some(c => c.id === id);
-        if (exist) {
-            showToast("Este número já está cadastrado!");
-            return;
-        }
+    const playSymbol = '\u25B6\uFE0E';
 
-        const newCard = createContactCardHTML(name, "Nova conversa...", id);
-        document.querySelector('.contacts-list').prepend(newCard);
+    let mainContentHTML = "";
 
-        savedContacts.unshift({id: id, name: name, lastMsg: "Nova conversa..."});
-        localStorage.setItem('savedContacts', JSON.stringify(savedContacts));
-
-        nameInput.value = '';
-        numberInput.value = '';
-        document.getElementById('add-contact-modal').style.display = 'none';
-        showToast("Contato salvo!");
+    if (type === 'image') {
+        mainContentHTML = `
+            <div class="message-media">
+                <img src="${safeContent}" class="msg-img" style="width:100%; border-radius:8px; display:block;">
+            </div>`;
+    } else if (type === 'file'){
+        mainContentHTML = `
+            <div class="file-wrapper" style="background:rgba(0,0,0,0.1); padding:10px; border-radius:8px; display:flex; align-items:center; gap:10px; color:inherit;">
+                <span>📂</span> <small style="word-break:break-all;">${safeContent}</small>
+            </div>
+        `
+    } else if (type === 'audio') {
+        mainContentHTML = `
+            <div class="audio-player-container">
+                <button class="audio-play-btn">${playSymbol}</button>
+                <div class="audio-controls">
+                    <div class="audio-waveform"><div class="audio-progress"></div></div>
+                    <div class="audio-meta"><span class="audio-duration">${safeContent}</span></div>
+                </div>
+            </div>`;
     } else {
-        showToast("Por favor, insira um nome e um número válido.");
+        mainContentHTML = `<div class="message-text">${safeContent}</div>`;
     }
+
+    const captionHTML = (safeCaption && type !== 'text') 
+        ? `<div class="message-caption" style="margin-top:8px; font-size:0.95rem;">${safeCaption}</div>` 
+        : "";
+
+    return `
+        <div class="message-bubble ${type === 'audio' ? 'audio-bubble' : ''}">
+            <div class="message-options-btn"><span>&#9013;</span></div>
+            <div class="message-menu">
+                ${type !== 'audio' ? '<button onclick="handleReply(this)">Responder</button>' : ''}
+                ${type !== 'audio' ? '<button onclick="handleCopy(this)">Copiar</button>' : ''}
+                <button class="delete-btn" onclick="handleDelete(this)">Apagar</button>
+            </div>
+            
+            ${mainContentHTML}
+            ${captionHTML}
+            
+            <span class="message-time">${time} ${checks}</span>
+        </div>
+    `;
+    
 }
 
-function createMessageHTML(content, time, type = 'text') {
+
+
+/*function createMessageHTML(content, time, type = 'text') {
     const isAudio = type === 'audio';
     const isImage = type === 'image';
     const isFile = type === 'file';
@@ -396,46 +592,34 @@ function createMessageHTML(content, time, type = 'text') {
             <span class="message-time">${time}</span>
         </div>
     `;
-}
+}*/
 
 function sendMessage() {
     const chatInput = document.getElementById('chat-input');
     const text = chatInput.value.trim();
     const now = new Date();
-    const time = now.getHours() + ":" + now.getMinutes().toString.padStart(2, "0")
+    const time = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+
+    // Se houver um arquivo pendente (imagem ou documento)
     if (pendingFile) {
-        const isImage = pendingFile.type.startsWith('image/');
-        if (isImage) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                sendMediaWithCaption(e.target.result, text, time, 'image');
-            };
-            reader.readAsDataURL(pendingFile);
-        } else {
-            sendMediaWithCaption(pendingFile.name, text, time, 'file');
-        }
+        const type = pendingFile.type.startsWith('image/') ? 'image' : 'file';
+        const content = type === 'image' ? pendingFile.base64 : pendingFile.name;
+
+        // Usamos a função centralizada para renderizar e salvar
+        renderAndSave(content, time, type, 'sent', text);
 
         pendingFile = null;
         chatInput.placeholder = "Digite uma Mensagem";
-    } else if (text !== "") {
-        const now = new Date();
-        const time = now.getHours() + ":" + now.getMinutes().toString().padStart(2, '0');
-        const messagesContainer = document.querySelector('.messages-container');
+    } 
+    // Se for apenas uma mensagem de texto comum
+    else if (text !== "") {
+        renderAndSave(text, time, 'text', 'sent');
         
-        const messageRow = document.createElement('div');
-        messageRow.classList.add('message-row', 'message-sent');
-        messageRow.innerHTML = createMessageHTML(text, time, 'text');
-        
-        messagesContainer.appendChild(messageRow);
-        if (activeContact) {
-            saveToLocalStorage(activeContact, text, time, 'text', 'sent');
-            updateLastMsgDisplay(activeContact, text, 'text');
-        }
         chatInput.value = "";
         chatInput.style.height = 'auto';
         toggleInputButtons("");
-        scrollToBottom();
 
+        // Simulações de resposta (opcional)
         setTimeout(() => receiveMessage("Resposta automática", "text"), 1500);
         setTimeout(() => receiveMessage("0:05", "audio"), 3000);
     }
@@ -558,7 +742,51 @@ function handleContactSearch(e) {
     });
 }
 
-function handleFiles(files) {
+async function handleFiles(files) {
+    const file = files[0]; // Corrigido de file[0] para files[0]
+    if (!file || !activeContact) return;
+
+    const previewModal = document.getElementById('media-preview-modal');
+    const previewContainer = document.getElementById('preview-container');
+    const captionInput = document.getElementById('media-caption');
+
+    previewContainer.innerHTML = "";
+    captionInput.value = "";
+    pendingFile = file;
+
+    if (file.type.startsWith('image/')) {
+        const base64 = await convertToBase64(file);
+        previewContainer.innerHTML = `<img src="${base64}" style="max-width:100%; max-height:300px; border-radius:8px; display:block; margin: 0 auto;">`;
+        pendingFile.base64 = base64; // Atribui o base64 ao objeto do arquivo
+    } else {
+        previewContainer.innerHTML = `
+            <div style="text-align:center; padding:20px;">
+                <span style="font-size:50px;">📄</span>
+                <p style="margin-top:10px; word-break:break-all;">${file.name}</p>
+            </div>`;
+    }
+    previewModal.style.display = 'flex'; // Certifique-se que o CSS usa display para mostrar
+    previewModal.classList.add('active');
+}
+
+document.getElementById('confirm-send-btn').onclick = () => {
+    const caption = document.getElementById('media-caption').value.trim();
+    const now = new Date(); // Corrigido de DataTransfer para Date
+    const time = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+
+    const type = pendingFile.type.startsWith('image/') ? 'image' : 'file';
+    const content = type === 'image' ? pendingFile.base64 : pendingFile.name;
+
+    // Chamada corrigida com os parâmetros separados
+    renderAndSave(content, time, type, 'sent', caption);
+
+    // Fecha modal e limpa estado
+    document.getElementById('media-preview-modal').style.display = 'none';
+    document.getElementById('media-preview-modal').classList.remove('active');
+    pendingFile = null; 
+};
+
+/*function handleFiles(files) {
     const file = files[0];
     if (!file) return;
 
@@ -569,7 +797,7 @@ function handleFiles(files) {
     chatInput.classList.add('has-pending-file');
 
     chatInput.focus
-}
+}*/
 
 function sendMediaMessage(content, time, type) {
     const messagesContainer = document.querySelector('.messages-container');

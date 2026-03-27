@@ -817,13 +817,116 @@ body, html {
     color: #333;
     font-size: 0.95rem;
     line-height: 1.4;
-    background: white; /* Ou a cor do balão */
+    background: white; 
 }
 .message-time.overlay {
-    /* Ajuste para não ficar em cima do texto da legenda */
     position: relative; 
     float: right;
     margin-top: -15px;
+}
+
+#media-preview-modal {
+    background: rgba(0, 0, 0, 0.85); 
+    backdrop-filter: blur(5px); 
+}
+
+#media-preview-modal .modal-content {
+    background: transparent; 
+    border: none;
+    box-shadow: none;
+    width: 90%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#preview-container img {
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    max-height: 60vh !important;
+}
+
+.caption-container {
+    margin-top: 20px;
+    width: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #2a2f32; 
+    border-radius: 25px;
+    padding: 5px 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+#media-caption {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 12px 15px;
+    font-size: 16px;
+    outline: none;
+}
+
+.send-media-fab {
+    background: #00a884; 
+    color: white;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+    margin-left: 10px;
+}
+
+.send-media-fab:hover {
+    background: #008f6f;
+    transform: scale(1.05);
+}
+
+.close-modal {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    color: white;
+    font-size: 30px;
+    cursor: pointer;
+    opacity: 0.7;
+}
+.close-modal:hover { opacity: 1; }
+
+.contact-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background-color: #51585c; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 500;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.contact-avatar::after {
+    content: attr(data-initials);
+    position: absolute;
+}
+
+.contact-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1; 
+    position: relative;
 }
 
 /* --- RESPONSIVIDADE (MOBILE) --- */
