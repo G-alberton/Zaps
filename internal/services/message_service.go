@@ -40,10 +40,12 @@ func (s *MessageService) SaveMessage(msg models.Message) error {
 		msg.Timestamp = time.Now()
 	}
 
-	err := s.repo.Save(msg)
-	if err != nil {
-		log.Println("Erro ao salvar mensagem:", err)
-		return err
+	if s.repo != nil {
+		err := s.repo.Save(msg)
+		if err != nil {
+			log.Println("Erro ao salvar mensagem:", err)
+			return err
+		}
 	}
 
 	log.Println("Mensagem salva:", msg.From, msg.Type)

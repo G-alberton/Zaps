@@ -37,3 +37,16 @@ func (s *ConversationService) GetOrCreate(contact string) string {
 
 	return id
 }
+
+func (s *ConversationService) List() []models.Conversation {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	conversations := []models.Conversation{}
+
+	for _, conv := range s.conversations {
+		conversations = append(conversations, conv)
+	}
+
+	return conversations
+}

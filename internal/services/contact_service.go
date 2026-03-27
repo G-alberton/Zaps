@@ -25,10 +25,12 @@ func (s *ContactService) SaveContact(phone, name string) error {
 		return fmt.Errorf("telefone inválido")
 	}
 
-	exists := s.repo.Exists(phone)
-	if exists {
-		log.Println("Contato já existe:", phone)
-		return nil
+	if s.repo != nil {
+		exists := s.repo.Exists(phone)
+		if exists {
+			log.Println("Contato já existe:", phone)
+			return nil
+		}
 	}
 
 	contact := models.Contact{
@@ -36,10 +38,12 @@ func (s *ContactService) SaveContact(phone, name string) error {
 		Name:  name,
 	}
 
-	err := s.repo.Save(contact)
-	if err != nil {
-		log.Println("Erro ao salvar contato:", err)
-		return err
+	if s.repo != nil {
+		err := s.repo.Save(contact)
+		if err != nil {
+			log.Println("Erro ao salvar contato:", err)
+			return err
+		}
 	}
 
 	log.Println("Contato salvo:", phone)

@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 )
 
-var verifyToken = os.Getenv("VERIFY_TOKEN") //colocar na .env
+const verifyToken = "123456"
+
+//var verifyToken = os.Getenv("VERIFY_TOKEN") //colocar na .env
 
 func init() {
 	if verifyToken == "" {

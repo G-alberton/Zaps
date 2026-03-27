@@ -4,30 +4,29 @@ import (
 	"log"
 	"net/http"
 
-	"ZAPS/internal/database"
-	"ZAPS/internal/repository"
+	"ZAPS/internal/handlers"
 	"ZAPS/internal/services"
 	"ZAPS/internal/webhook"
 )
 
 func main() {
-	db := database.Connect()
-
-	contactRepo := repository.NewContactRepository(db)
-	messageRepo := repository.NewMessageRepository(db)
-	contactService := services.NewContactService(contactRepo)
-	messageService := services.NewMessageService(messageRepo)
+	contactService := services.NewContactService(nil)
+	messageService := services.NewMessageService(nil)
 	mediaService := services.NewMediaService("Token")
 	conversationService := services.NewConversationService()
 
 	mux := http.NewServeMux()
-	// passa serviço para o webhook
+
+	// webhook
 	mux.HandleFunc("/webhook", webhook.HandleWebhook(
 		contactService,
 		messageService,
 		mediaService,
-		conversationService, // 👈 aqui
+		conversationService,
 	))
+
+	// conversations
+	mux.HandleFunc("/conversations", handlers.GetConversations(conversationService))
 
 	server := &http.Server{
 		Addr:    ":8080",
