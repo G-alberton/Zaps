@@ -17,14 +17,12 @@ function saveNewContact() {
     const id = cleaNumber(rawNumber);
 
     if(name && id) {
-        // 1. Verificação de duplicados
         const exist = savedContacts.some(c => c.id === id);
         if (exist) {
             showToast("Este número já está cadastrado!");
             return;
         }
 
-        // 2. Criação do objeto (avatarUrl começa vazio para a API preencher depois)
         const contactData = {
             id: id, 
             name: name, 
@@ -32,23 +30,19 @@ function saveNewContact() {
             avatarUrl: "" 
         };
 
-        // 3. Renderização na barra lateral
-        // Passamos contactData.avatarUrl (vazio) para que createContactCardHTML use as iniciais
         const newCard = createContactCardHTML(contactData.name, contactData.lastMsg, contactData.id, contactData.avatarUrl);
         document.querySelector('.contacts-list').prepend(newCard);
 
-        // 4. Persistência no LocalStorage
         savedContacts.unshift(contactData);
         localStorage.setItem('savedContacts', JSON.stringify(savedContacts));
 
-        // 5. Reset da UI
         nameInput.value = '';
         numberInput.value = '';
         document.getElementById('add-contact-modal').style.display = 'none';
         showToast("Contato salvo!");
 
         // 6. GATILHO DA API (Opcional agora, obrigatório depois)
-        // Aqui é onde você chamaria sua função: fetchWhatsAppAvatar(id);
+        // Aqui é onde você chamaria função: fetchWhatsAppAvatar(id);
         
     } else {
         showToast("Por favor, insira um nome e um número válido.");
@@ -78,14 +72,11 @@ function renderAndSave(content, time, type, side, caption) {
     const row = document.createElement('div');
     row.classList.add('message-row', `message-${side}`);
     
-    // Usa sua função createMessageHTML que já configuramos
     row.innerHTML = createMessageHTML(content, time, type, side, caption);
     container.appendChild(row);
     
     if (activeContact) {
-        // Salva no LocalStorage com o novo esquema
         saveToLocalStorage(activeContact, content, time, type, side, caption);
-        // Atualiza a barra lateral (se for imagem/arquivo, mostra o nome ou ícone)
         const lastMsgText = type === 'text' ? content : (type === 'image' ? '📷 Foto' : '📂 Arquivo');
         updateLastMsgDisplay(activeContact, lastMsgText, type);
     }
@@ -244,14 +235,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.handleReply = handleReply;
 
     if (elements.saveContactBtn) {
-        // Apenas apontamos para a função que está lá em cima
         elements.saveContactBtn.onclick = saveNewContact;
     }
 
-    // Carregamento inicial de contatos
     if (savedContacts.length > 0){
         savedContacts.forEach(contact => {
-            // Ajuste na chamada para passar o avatarUrl também
             const newCard = createContactCardHTML(contact.name, contact.lastMsg, contact.id, contact.avatarUrl);
             elements.contactsList.appendChild(newCard);
         });
@@ -331,7 +319,7 @@ function setupEventListeners(elements) {
             const mediaModal = document.getElementById('media-preview-modal');
             mediaModal.style.display = 'none';
             mediaModal.classList.remove('active');
-            pendingFile = null; // Limpa o arquivo pendente se o usuário cancelar
+            pendingFile = null; 
         };
     }
     
@@ -385,7 +373,6 @@ function createContactCardHTML(name, lastMsg, id, avatarUrl) {
 
     const initials = getInitials(name);
     
-    // Lógica de fallback: se a imagem falhar ou não existir, o CSS mostra as iniciais
     const imgHTML = avatarUrl 
         ? `<img src="${avatarUrl}" onerror="this.style.display='none'">` 
         : '';
@@ -409,10 +396,8 @@ function createContactCardHTML(name, lastMsg, id, avatarUrl) {
         </div>
     `;
 
-    // Evento de clique para abrir a conversa
     card.addEventListener('click', (e) => handleContactClick(card, name, id, e));
     
-    // Lógica do menu de opções (seu código original preservado)
     const menuBtn = card.querySelector('.contact-options-btn');
     menuBtn.onclick = (e) => {
         e.stopPropagation();
@@ -429,16 +414,13 @@ function createContactCardHTML(name, lastMsg, id, avatarUrl) {
 function handleContactClick(card, name, id, e) {
     if (e.target.closest('.contact-menu')) return;
 
-    // Remove active de todos e adiciona no clicado
     document.querySelectorAll('.contact-card').forEach(c => c.classList.remove('active'));
     card.classList.add('active');
 
     activeContact = id;
     
-    // Busca os dados completos do contato para pegar o avatarUrl
     const contact = savedContacts.find(c => c.id === id);
     
-    // Atualiza o Nome no Header
     document.querySelector('.chat-header-info strong').innerText = name;
 
     // --- NOVO: Atualiza a foto no Header ---
@@ -463,7 +445,6 @@ function handleContactClick(card, name, id, e) {
     }
 }
 
-// Função auxiliar para atualizar o avatar do topo (coloque fora do DOMContentLoaded)
 function updateHeaderAvatar(url, name) {
     const headerAvatarContainer = document.querySelector('.chat-header .contact-avatar'); 
     if (!headerAvatarContainer) return;
@@ -600,18 +581,16 @@ function sendMessage() {
     const now = new Date();
     const time = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
 
-    // Se houver um arquivo pendente (imagem ou documento)
     if (pendingFile) {
         const type = pendingFile.type.startsWith('image/') ? 'image' : 'file';
         const content = type === 'image' ? pendingFile.base64 : pendingFile.name;
 
-        // Usamos a função centralizada para renderizar e salvar
         renderAndSave(content, time, type, 'sent', text);
 
         pendingFile = null;
         chatInput.placeholder = "Digite uma Mensagem";
     } 
-    // Se for apenas uma mensagem de texto comum
+
     else if (text !== "") {
         renderAndSave(text, time, 'text', 'sent');
         
@@ -619,7 +598,6 @@ function sendMessage() {
         chatInput.style.height = 'auto';
         toggleInputButtons("");
 
-        // Simulações de resposta (opcional)
         setTimeout(() => receiveMessage("Resposta automática", "text"), 1500);
         setTimeout(() => receiveMessage("0:05", "audio"), 3000);
     }
@@ -743,7 +721,7 @@ function handleContactSearch(e) {
 }
 
 async function handleFiles(files) {
-    const file = files[0]; // Corrigido de file[0] para files[0]
+    const file = files[0]; 
     if (!file || !activeContact) return;
 
     const previewModal = document.getElementById('media-preview-modal');
@@ -757,7 +735,7 @@ async function handleFiles(files) {
     if (file.type.startsWith('image/')) {
         const base64 = await convertToBase64(file);
         previewContainer.innerHTML = `<img src="${base64}" style="max-width:100%; max-height:300px; border-radius:8px; display:block; margin: 0 auto;">`;
-        pendingFile.base64 = base64; // Atribui o base64 ao objeto do arquivo
+        pendingFile.base64 = base64; 
     } else {
         previewContainer.innerHTML = `
             <div style="text-align:center; padding:20px;">
@@ -765,22 +743,20 @@ async function handleFiles(files) {
                 <p style="margin-top:10px; word-break:break-all;">${file.name}</p>
             </div>`;
     }
-    previewModal.style.display = 'flex'; // Certifique-se que o CSS usa display para mostrar
+    previewModal.style.display = 'flex'; 
     previewModal.classList.add('active');
 }
 
 document.getElementById('confirm-send-btn').onclick = () => {
     const caption = document.getElementById('media-caption').value.trim();
-    const now = new Date(); // Corrigido de DataTransfer para Date
+    const now = new Date(); 
     const time = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
 
     const type = pendingFile.type.startsWith('image/') ? 'image' : 'file';
     const content = type === 'image' ? pendingFile.base64 : pendingFile.name;
-
-    // Chamada corrigida com os parâmetros separados
+    
     renderAndSave(content, time, type, 'sent', caption);
 
-    // Fecha modal e limpa estado
     document.getElementById('media-preview-modal').style.display = 'none';
     document.getElementById('media-preview-modal').classList.remove('active');
     pendingFile = null; 
