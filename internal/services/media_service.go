@@ -1,20 +1,26 @@
 package services
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
 )
 
 type MediaService struct {
-	Token string
+	Token         string
+	PhoneNumberID string
 }
 
-func NewMediaService(token string) *MediaService {
-	return &MediaService{Token: token}
+func NewMediaService(token, phoneID string) *MediaService {
+	return &MediaService{
+		Token:         token,
+		PhoneNumberID: phoneID,
+	}
 }
 
 type mediaResponse struct {
@@ -132,4 +138,49 @@ func (s *MediaService) DownloadByID(mediaID, msgType string) (string, error) {
 	}
 
 	return filePath, nil
+}
+
+func (s *MediaService) SendTextMessage(to, body string) error {
+	url := fmt.Sprintf(
+		"https://graph.facebook.com/v22.0/%s/messages",
+		s.PhoneNumberID,
+	)
+
+	data := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"to":                to,
+		"type":              "text",
+		"text": map[string]string{
+			"body": body,
+		},
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("Authorization", "Bearer "+s.Token)
+	req.Header.Add("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	log.Println("Resposta WhatsApp:", string(respBody))
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("erro ao enviar mensagem")
+	}
+
+	return nil
 }
