@@ -30,7 +30,11 @@ func main() {
 
 	// conversations
 	mux.HandleFunc("/conversations", handlers.GetConversations(conversationService))
-	mux.HandleFunc("/send-message", handlers.SendMessage(mediaService))
+	mux.HandleFunc("/send-message", handlers.SendMessage(
+		mediaService,
+		messageService,
+		conversationService,
+	))
 
 	server := &http.Server{
 		Addr:    ":8080",

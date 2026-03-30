@@ -10,4 +10,5 @@ type Message struct {
 	Body           string
 	MediaID        string
 	Timestamp      time.Time
+	Direction      string
 }

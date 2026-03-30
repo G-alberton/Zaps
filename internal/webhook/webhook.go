@@ -180,6 +180,7 @@ func processMessage(
 		Body:           body,
 		MediaID:        mediaID,
 		Timestamp:      timestamp,
+		Direction:      "inbound",
 	}
 
 	if err := messageService.SaveMessage(message); err != nil {
