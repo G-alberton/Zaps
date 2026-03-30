@@ -1,13 +1,21 @@
 package main
 
 import (
-	"log"
-	"net/http"
-
 	"ZAPS/internal/handlers"
 	"ZAPS/internal/services"
 	"ZAPS/internal/webhook"
+	"log"
+	"net/http"
+
+	"github.com/joho/godotenv"
 )
+
+func loadEnv() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Aviso: .env não encontrado, usando variaveis do sistema")
+	}
+}
 
 func main() {
 	contactService := services.NewContactService(nil)

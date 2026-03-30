@@ -25,7 +25,7 @@ func NewMediaService(token, phoneID string) *MediaService {
 
 type mediaResponse struct {
 	URL      string `json:"url"`
-	mimeType string `json:"mime_type"`
+	MimeType string `json:"mime_type"`
 }
 
 func (s *MediaService) GetMediaURL(mediaID string) (string, string, error) {
@@ -53,7 +53,7 @@ func (s *MediaService) GetMediaURL(mediaID string) (string, string, error) {
 		return "", "", err
 	}
 
-	return result.URL, result.mimeType, nil
+	return result.URL, result.MimeType, nil
 }
 
 func getExtension(mime string) string {
