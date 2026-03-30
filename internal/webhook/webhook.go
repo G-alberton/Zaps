@@ -69,10 +69,8 @@ func HandleWebhook(
 				return
 			}
 
-			// responde rápido pro WhatsApp
 			w.WriteHeader(http.StatusOK)
 
-			// processamento em background (ESSENCIAL)
 			go processEvent(event, contactService, messageService, mediaService, conversationService)
 
 		default:
@@ -105,7 +103,7 @@ func processEvent(
 					contactService,
 					messageService,
 					mediaService,
-					conversationService, // 👈 ADICIONAR ISSO
+					conversationService,
 				)
 			}
 		}
@@ -129,7 +127,6 @@ func processMessage(
 
 	log.Println("Recebido de:", msg.From, name)
 
-	// salva contato
 	if err := contactService.SaveContact(msg.From, name); err != nil {
 		log.Println("Erro ao salvar contato:", err)
 	}
@@ -159,7 +156,6 @@ func processMessage(
 		}
 	}
 
-	// download de mídia
 	if mediaID != "" {
 		if filePath, err := mediaService.DownloadByID(mediaID, msg.Type); err != nil {
 			log.Println("Erro ao baixar mídia:", err)
@@ -176,7 +172,6 @@ func processMessage(
 
 	timestamp := time.Unix(tsInt, 0)
 
-	// salva mensagem
 	message := models.Message{
 		ID:             msg.ID,
 		ConversationID: conversationID,

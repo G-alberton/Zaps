@@ -22,12 +22,10 @@ func (s *ConversationService) GetOrCreate(contact string) string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// se já existe, retorna
 	if conv, ok := s.conversations[contact]; ok {
 		return conv.ID
 	}
 
-	// cria nova
 	id := uuid.New().String()
 
 	s.conversations[contact] = models.Conversation{

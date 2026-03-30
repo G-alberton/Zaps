@@ -6,7 +6,6 @@ import (
 	"log"
 )
 
-// aqui a gente se comunica com o banco de dados
 type ContactRepository struct {
 	DB *sql.DB
 }
