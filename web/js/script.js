@@ -702,19 +702,6 @@ document.getElementById('confirm-send-btn').onclick = () => {
     pendingFile = null; 
 };
 
-/*function handleFiles(files) {
-    const file = files[0];
-    if (!file) return;
-
-    pendingFile = file;
-
-    const chatInput = file;
-    chatInput.placeholder = "Adicione uma legenda";
-    chatInput.classList.add('has-pending-file');
-
-    chatInput.focus
-}*/
-
 function sendMediaMessage(content, time, type) {
     const messagesContainer = document.querySelector('.messages-container');
     const row = document.createElement('div');
