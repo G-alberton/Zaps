@@ -42,3 +42,16 @@ func (r *ContactRepository) Exists(phone string) bool {
 
 	return exists
 }
+
+func (r *ContactRepository) GetByPhone(phone string) (*models.Contact, error) {
+	query := `SELECT phone, name FROM contacts WHERE phone = $1`
+
+	var contact models.Contact
+
+	err := r.DB.QueryRow(query, phone).Scan(&contact.Phone, &contact.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &contact, nil
+}

@@ -4,6 +4,7 @@ import (
 	"ZAPS/internal/models"
 	"ZAPS/internal/repository"
 	"log"
+	"sort"
 	"sync"
 	"time"
 )
@@ -57,9 +58,24 @@ func (s *MessageService) SaveMessage(msg models.Message) error {
 		}
 	}
 
-	log.Println("Mensagem salva:", msg.From, msg.Type, msg.Direction)
+	log.Printf("Mensagem salva | From: %s | Type: %s | Direction: %s", msg.From, msg.Type, msg.Direction)
 	return nil
 }
+
+/*func (s *MessageService) GetByConversation(conversationID string) []models.Message {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var result []models.Message
+
+	for _, msg := range s.messages {
+		if msg.ConversationID == conversationID {
+			result = append(result, msg)
+		}
+	}
+
+	return result
+}*/
 
 func (s *MessageService) GetByConversation(conversationID string) []models.Message {
 	s.mu.Lock()
@@ -72,6 +88,10 @@ func (s *MessageService) GetByConversation(conversationID string) []models.Messa
 			result = append(result, msg)
 		}
 	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Timestamp.Before(result[j].Timestamp)
+	})
 
 	return result
 }
@@ -99,5 +119,34 @@ func (s *MessageService) GetAll() []models.Message {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.messages
+	copySlice := make([]models.Message, len(s.messages))
+	copy(copySlice, s.messages)
+
+	return copySlice
+}
+
+func (s *MessageService) CountUnread(conversationID string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	count := 0
+
+	for _, msg := range s.messages {
+		if msg.ConversationID == conversationID && msg.Direction == "inbound" {
+			count++
+		}
+	}
+
+	return count
+}
+
+func (s *MessageService) MarkAsRead(conversationID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i := range s.messages {
+		if s.messages[i].ConversationID == conversationID {
+			s.messages[i].Direction = "read"
+		}
+	}
 }

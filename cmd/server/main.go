@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"ZAPS/internal/handlers"
 	"ZAPS/internal/services"
@@ -33,11 +34,19 @@ func main() {
 
 	mux.HandleFunc("/messages", handlers.GetMessages(messageService))
 
-	mux.HandleFunc("/conversations", handlers.GetConversations(conversationService, messageService))
+	mux.HandleFunc("/conversations", handlers.GetConversations(
+		conversationService,
+		messageService,
+		contactService,
+	))
+
+	mux.HandleFunc("/mark-as-read", handlers.MarkAsRead(messageService))
 
 	server := &http.Server{
-		Addr:    ":8080",
-		Handler: mux,
+		Addr:         ":8080",
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	log.Println("🚀 Servidor rodando em http://localhost:8080")

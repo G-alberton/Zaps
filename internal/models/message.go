@@ -11,4 +11,5 @@ type Message struct {
 	MediaID        string
 	Timestamp      time.Time
 	Direction      string
+	Read           bool
 }

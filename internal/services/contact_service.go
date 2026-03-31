@@ -15,6 +15,17 @@ func NewContactService(repo *repository.ContactRepository) *ContactService {
 	return &ContactService{repo: repo}
 }
 
+func (s *ContactService) GetName(phone string) string {
+	if s.repo != nil {
+		contact, err := s.repo.GetByPhone(phone)
+		if err == nil && contact != nil && contact.Name != "" {
+			return contact.Name
+		}
+	}
+
+	return phone
+}
+
 func (s *ContactService) SaveContact(phone, name string) error {
 
 	if phone == "" {
