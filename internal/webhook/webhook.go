@@ -12,8 +12,6 @@ import (
 
 const verifyToken = "123456"
 
-//var verifyToken = os.Getenv("VERIFY_TOKEN") //colocar na .env
-
 func init() {
 	if verifyToken == "" {
 		log.Fatal("VERIFY_TOKEN não definido")

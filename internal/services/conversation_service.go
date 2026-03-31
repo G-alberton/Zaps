@@ -48,3 +48,16 @@ func (s *ConversationService) List() []models.Conversation {
 
 	return conversations
 }
+
+func (s *ConversationService) GetAll() []models.Conversation {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var list []models.Conversation
+
+	for _, c := range s.conversations {
+		list = append(list, c)
+	}
+
+	return list
+}
