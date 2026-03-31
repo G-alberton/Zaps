@@ -41,9 +41,7 @@ function saveNewContact() {
         document.getElementById('add-contact-modal').style.display = 'none';
         showToast("Contato salvo!");
 
-        // 6. GATILHO DA API (Opcional agora, obrigatório depois)
-        // Aqui é onde você chamaria função: fetchWhatsAppAvatar(id);
-        
+                
     } else {
         showToast("Por favor, insira um nome e um número válido.");
     }
