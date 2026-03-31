@@ -64,7 +64,7 @@ func GetConversations(
 
 			resp := conversationResponse{
 				ConversationID: conv.ID,
-				Name:           name, // 👈 usa a variável
+				Name:           name,
 				Phone:          conv.Contact,
 				UnreadCount:    messageService.CountUnread(conv.ID),
 			}
