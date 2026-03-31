@@ -515,47 +515,6 @@ function createMessageHTML(content = "", time = "", type = "text", side = "sent"
     
 }
 
-
-
-/*function createMessageHTML(content, time, type = 'text') {
-    const isAudio = type === 'audio';
-    const isImage = type === 'image';
-    const isFile = type === 'file';
-    const isSent = type === 'sent';
-    const playSymbol = '\u25B6\uFE0E'; 
-    const pauseSymbol = '\u23F8\uFE0E';
-    
-    const checks = isSent ? '<span class="message-checks">✓✓</span>' : '';
-    const timeHTML = `<span class="message-time">${time} ${checks}</span>`;
-
-    let actionTopBat = '';
-
-    if (isImage || isFile){
-        //parou aqui
-    }
-
-    return `
-        <div class="message-bubble ${isAudio ? 'audio-bubble' : ''}">
-            <div class="message-options-btn"><span>&#9013;</span></div>
-            <div class="message-menu">
-                ${!isAudio ? '<button onclick="handleReply(this)">Responder</button>' : ''}
-                ${!isAudio ? '<button onclick="handleCopy(this)">Copiar</button>' : ''}
-                <button class="delete-btn" onclick="handleDelete(this)">Apagar</button>
-            </div>
-            ${isAudio ? `
-                <div class="audio-player-container">
-                    <button class="audio-play-btn">${playSymbol}</button>
-                    <div class="audio-controls">
-                        <div class="audio-waveform"><div class="audio-progress"></div></div>
-                        <div class="audio-meta"><span class="audio-duration">${content}</span></div>
-                    </div>
-                </div>
-            ` : `<div class="message-text">${content}</div>`}
-            <span class="message-time">${time}</span>
-        </div>
-    `;
-}*/
-
 function sendMessage() {
     const chatInput = document.getElementById('chat-input');
     const text = chatInput.value.trim();
