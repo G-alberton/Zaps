@@ -406,10 +406,8 @@ function handleContactClick(card, name, id, e) {
     
     document.querySelector('.chat-header-info strong').innerText = name;
 
-    // --- NOVO: Atualiza a foto no Header ---
     updateHeaderAvatar(contact?.avatarUrl, name);
-    // ----------------------------------------
-
+    
     const messagesContainer = document.querySelector('.messages-container');
     messagesContainer.innerHTML = "";
 
