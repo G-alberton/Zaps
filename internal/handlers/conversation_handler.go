@@ -81,7 +81,6 @@ func GetConversations(
 			})
 		}
 
-		// 🔥 ordenação REAL (timestamp correto)
 		sort.Slice(tempList, func(i, j int) bool {
 			return tempList[i].rawTime > tempList[j].rawTime
 		})
