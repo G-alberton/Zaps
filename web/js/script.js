@@ -100,21 +100,6 @@ function saveToLocalStorage(contactId, content = "", time = "", type = "text", s
     localStorage.setItem('chatHistories', JSON.stringify(chatHistories))
 }
 
-/*function saveToLocalStorage(contactName, content, time, type, side){
-    if (!chatHistories[contactName]){
-        chatHistories[contactName] = [];
-    }
-
-    chatHistories[contactName].push({
-        content: content,
-        time: time,
-        type: type,
-        side: side
-    });
-
-    localStorage.setItem('chatHistories', JSON.stringify(chatHistories));
-}*/
-
 function showToast(message){
     const toast = document.getElementById('toast');
     clearTimeout(toastTimer);
