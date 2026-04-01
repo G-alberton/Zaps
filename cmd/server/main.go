@@ -87,6 +87,7 @@ func main() {
 		}
 	}()
 
+	/*desligar o servidor*/
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 
