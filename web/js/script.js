@@ -415,7 +415,7 @@ function handleContactClick(card, name, id, e) {
     
     document.querySelector('.chat-header-info strong').innerText = name;
 
-    updateHeaderAvatar(contact?.avatarUrl, name);
+    updateHeaderAvatar(card.dataset.avatar, name);
     
     const messagesContainer = document.querySelector('.messages-container');
     messagesContainer.innerHTML = "";
@@ -529,11 +529,14 @@ async function sendMessage() {
         
         renderAndSave(content, time, type, 'sent', text);
 
-        await fetch("/send-media", {
+        await fetch("http://localhost:8080/send-media", {
             method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify({
                 to: activeContact,
-                file: base64,
+                file: pendingFile.base64,
                 type: "image"
             })
         })
@@ -546,6 +549,8 @@ async function sendMessage() {
 
     if (text !== "") {
         try{
+            console.log("Enviando mensagem para:", activeContact);
+
             await fetch("http://localhost:8080/send-message", {
                 method: "POST",
                 headers: {
@@ -556,6 +561,8 @@ async function sendMessage() {
                     body: text
                 })
             });
+
+            console.log("Mensagem enviada com sucesso");
 
             await loadMessages(activeContact)
 
