@@ -8,6 +8,63 @@ let timerInterval;
 let seconds = 0;
 let pendingFile = null;
 
+async function loadConversations(params) {
+    try{
+        const res = await fetch("http://localhost:8080/conversations");
+        const data = await res.json();
+
+        const list = document.querySelector('.contacts-list');
+        list.innerHTML = "";
+
+        data.forEach(conv => {
+            const card = createContactCardHTML(
+                conv.phone,
+                conv.last_message,
+                conv.conversation_id
+            );
+
+            list.appendChild(card);
+        });
+    } catch (err) {
+        console.error("Error ao carregar conversas:", err);
+    }
+}
+
+async function loadMessages(conversationID){
+    try{
+        const res = await fetch(`http://localhost:8080/messages?conversation_id=${conversationID}`);
+        const messages = await res.json();
+
+        const container = document.querySelector('.messages-container');
+        container.innerHTML = "";
+
+        messages.forEach(msg => {
+            const row = document.createElement('div');
+
+            const side = msg.direction === "outbound" ? "sent" : "received";
+
+            row.classList.add(
+                'message-row',
+                side === 'sent' ? 'message-sent' : 'message-received'
+            );
+
+            row.innerHTML = createMessageHTML(
+                msg.body,
+                new Date().toLocaleTimeString().slice(0,5),
+                msg.type,
+                side
+            );
+
+            container.appendChild(row);
+        });
+
+        scrollToBottom();
+
+        } catch (err) {
+            console.error("Erro ao carregar mensagens:", err);
+    }
+}
+
 function saveNewContact() {
     const nameInput = document.getElementById('new-contact-name');
     const numberInput = document.getElementById('new-contact-number');
@@ -229,6 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     setupEventListeners(elements);
+    loadConversations();
 });
 
 function setupEventListeners(elements) {
@@ -424,6 +482,9 @@ function handleContactClick(card, name, id, e) {
     if (window.innerWidth <= 768) {
         document.querySelector('.sidebar')?.classList.add('hidden');
     }
+
+    activeContact = id;
+    loadMessages(id);
 }
 
 function updateHeaderAvatar(url, name) {
@@ -515,7 +576,55 @@ function createMessageHTML(content = "", time = "", type = "text", side = "sent"
     
 }
 
-function sendMessage() {
+async function sendMessage() {
+    const chatInput = document.getElementById('chat-input');
+    const text = chatInput.value.trim();
+
+    if (!activeContact) {
+        alert("Selecione um contato");
+        return;
+    }
+
+    const now = new Date();
+    const time = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0')
+
+    if (pendingFile) {
+        const type = pendingFile.type.startsWith('image/') ? 'image' : 'file';
+        const content = type === 'image' ? pendingFile.base64 : pendingFile.name;
+        
+        renderAndSave(content, time, type, 'sent', text);
+
+        pendingFile = null;
+        chatInput.placeholder = "Digite uma Mensagem";
+        return;
+    }
+
+    if (text !== "") {
+        try{
+            await fetch("http://localhost:8080/send-message", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    to: activeContact,
+                    body: text
+                })
+            });
+
+            renderAndSave(text, time, 'text', 'sent');
+
+            chatInput.value = "";
+            chatInput.style.height = 'auto';
+            toggleInputButtons("");
+
+        } catch (err) {
+            console.error("Erro ao enviar mensagem:", err);
+        }
+    }
+}
+
+/*function sendMessage() {
     const chatInput = document.getElementById('chat-input');
     const text = chatInput.value.trim();
     const now = new Date();
@@ -541,7 +650,7 @@ function sendMessage() {
         setTimeout(() => receiveMessage("Resposta automática", "text"), 1500);
         setTimeout(() => receiveMessage("0:05", "audio"), 3000);
     }
-}
+}*/
 
 function receiveMessage(content, type = 'text') {
     const now = new Date();

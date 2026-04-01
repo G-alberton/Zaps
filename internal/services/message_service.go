@@ -3,6 +3,7 @@ package services
 import (
 	"ZAPS/internal/models"
 	"ZAPS/internal/repository"
+	"fmt"
 	"log"
 	"sort"
 	"sync"
@@ -30,8 +31,7 @@ func (s *MessageService) SaveMessage(msg models.Message) error {
 	switch msg.Type {
 	case "text":
 		if msg.Body == "" {
-			log.Println("Mensagem de Texto Vazio")
-			return nil
+			return fmt.Errorf("Mensagem de Texto Vazio")
 		}
 	case "image", "audio", "document":
 		if msg.MediaID == "" {
@@ -79,11 +79,13 @@ func (s *MessageService) SaveMessage(msg models.Message) error {
 
 func (s *MessageService) GetByConversation(conversationID string) []models.Message {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	messagesCopy := make([]models.Message, len(s.messages))
+	copy(messagesCopy, s.messages)
+	s.mu.Unlock()
 
 	var result []models.Message
 
-	for _, msg := range s.messages {
+	for _, msg := range messagesCopy {
 		if msg.ConversationID == conversationID {
 			result = append(result, msg)
 		}

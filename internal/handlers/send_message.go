@@ -34,6 +34,13 @@ func SendMessage(
 			return
 		}
 
+		if req.To == "" || req.Body == "" {
+			http.Error(w, "to and body requerid", http.StatusBadRequest)
+			return
+		}
+
+		log.Println("[SEND] Para:", req.To, "| Msg:", req.Body)
+
 		err = mediaService.SendTextMessage(req.To, req.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -56,7 +63,16 @@ func SendMessage(
 			log.Println("erro ao salvar mensagem enviada:", err)
 		}
 
-		w.Write([]byte("mensagem enviada e salva"))
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":          "ok",
+			"conversation_id": conversationID,
+			"to":              req.To,
+			"body":            req.Body,
+		})
+		if err != nil {
+			log.Println("Erro ao retornar resposta:", err)
+		}
 	}
 
 }
