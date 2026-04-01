@@ -1,5 +1,3 @@
-let chatHistories = JSON.parse(localStorage.getItem('chatHistories')) || {};
-let savedContacts = JSON.parse(localStorage.getItem('savedContacts')) || [];
 let activeContact = null;
 let toastTimer;
 let modalAction = null;
@@ -50,7 +48,7 @@ async function loadMessages(conversationID){
 
             row.innerHTML = createMessageHTML(
                 msg.body,
-                new Date().toLocaleTimeString().slice(0,5),
+                new Date(msg.timestamp).toLocaleTimeString().slice(0,5),
                 msg.type,
                 side
             );
@@ -74,12 +72,6 @@ function saveNewContact() {
     const id = cleaNumber(rawNumber);
 
     if(name && id) {
-        const exist = savedContacts.some(c => c.id === id);
-        if (exist) {
-            showToast("Este número já está cadastrado!");
-            return;
-        }
-
         const contactData = {
             id: id, 
             name: name, 
@@ -89,9 +81,6 @@ function saveNewContact() {
 
         const newCard = createContactCardHTML(contactData.name, contactData.lastMsg, contactData.id, contactData.avatarUrl);
         document.querySelector('.contacts-list').prepend(newCard);
-
-        savedContacts.unshift(contactData);
-        localStorage.setItem('savedContacts', JSON.stringify(savedContacts));
 
         nameInput.value = '';
         numberInput.value = '';
@@ -131,30 +120,10 @@ function renderAndSave(content, time, type, side, caption) {
     container.appendChild(row);
     
     if (activeContact) {
-        saveToLocalStorage(activeContact, content, time, type, side, caption);
         const lastMsgText = type === 'text' ? content : (type === 'image' ? '📷 Foto' : '📂 Arquivo');
         updateLastMsgDisplay(activeContact, lastMsgText, type);
     }
     scrollToBottom();
-}
-
-function saveToLocalStorage(contactId, content = "", time = "", type = "text", side = "sent", caption = "") {
-    if (!contactId) return;
-
-    if(!chatHistories[contactId]) {
-        chatHistories[contactId] = [];
-    }
-
-    const messagePayload = {
-        content: content ?? "",
-        time: time ?? "00:00",
-        type: type ?? "text",
-        side: side ?? "sent",
-        caption: caption ?? ""
-    };
-
-    chatHistories[contactId].push(messagePayload);
-    localStorage.setItem('chatHistories', JSON.stringify(chatHistories))
 }
 
 function showToast(message){
@@ -256,15 +225,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelAddContactBtn: document.getElementById('cancel-add-contact-btn')
     };
 
-    if (savedContacts.length > 0){
-        savedContacts.forEach(contact => {
-            const newCard = createContactCardHTML(contact.name, contact.lastMsg || "Nova conversa...", contact.id);
-            elements.contactsList.appendChild(newCard);
-        });
-    }
-
-    setupEventListeners(elements);
-
     window.modalAction = null;
     window.currentTarget = null;
     window.handleDelete = handleDelete;
@@ -276,13 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (elements.saveContactBtn) {
         elements.saveContactBtn.onclick = saveNewContact;
-    }
-
-    if (savedContacts.length > 0){
-        savedContacts.forEach(contact => {
-            const newCard = createContactCardHTML(contact.name, contact.lastMsg, contact.id, contact.avatarUrl);
-            elements.contactsList.appendChild(newCard);
-        });
     }
 
     setupEventListeners(elements);
@@ -460,24 +413,12 @@ function handleContactClick(card, name, id, e) {
 
     activeContact = id;
     
-    const contact = savedContacts.find(c => c.id === id);
-    
     document.querySelector('.chat-header-info strong').innerText = name;
 
     updateHeaderAvatar(contact?.avatarUrl, name);
     
     const messagesContainer = document.querySelector('.messages-container');
     messagesContainer.innerHTML = "";
-
-    if (chatHistories[id]) {
-        chatHistories[id].forEach(msg => {
-            const row = document.createElement('div');
-            row.classList.add('message-row', msg.side === 'sent' ? 'message-sent' : 'message-received');
-            row.innerHTML = createMessageHTML(msg.content, msg.time, msg.type, msg.side, msg.caption);
-            messagesContainer.appendChild(row);
-        });
-        scrollToBottom();
-    }
 
     if (window.innerWidth <= 768) {
         document.querySelector('.sidebar')?.classList.add('hidden');
@@ -503,12 +444,6 @@ function updateHeaderAvatar(url, name) {
 
 function handleContactDelete(target) {
     const idToDelete = target.dataset.id;
-    
-    savedContacts = savedContacts.filter(c => c.id !== idToDelete);
-    delete chatHistories[idToDelete];
-    
-    localStorage.setItem('savedContacts', JSON.stringify(savedContacts));
-    localStorage.setItem('chatHistories', JSON.stringify(chatHistories));
     
     target.remove();
     document.querySelector('.messages-container').innerHTML = "";
@@ -594,6 +529,16 @@ async function sendMessage() {
         
         renderAndSave(content, time, type, 'sent', text);
 
+        await fetch("/send-media", {
+            method: "POST",
+            body: JSON.stringify({
+                to: activeContact,
+                file: base64,
+                type: "image"
+            })
+        })
+
+
         pendingFile = null;
         chatInput.placeholder = "Digite uma Mensagem";
         return;
@@ -612,7 +557,7 @@ async function sendMessage() {
                 })
             });
 
-            renderAndSave(text, time, 'text', 'sent');
+            await loadMessages(activeContact)
 
             chatInput.value = "";
             chatInput.style.height = 'auto';
@@ -664,7 +609,6 @@ function receiveMessage(content, type = 'text') {
     messagesContainer.appendChild(messageRow);
 
     if (activeContact) {
-        saveToLocalStorage(activeContact, content, time, type, 'received');
         updateLastMsgDisplay(activeContact, content, type);
     }
 
@@ -715,7 +659,6 @@ function stopRec() {
         
         messagesContainer.appendChild(messageRow);
         if (activeContact){
-            saveToLocalStorage(activeContact, finalTime, time, 'audio', 'sent');
             updateLastMsgDisplay(activeContact, finalTime, 'audio');
         }
         scrollToBottom();
@@ -882,11 +825,5 @@ function updateLastMsgDisplay(contactId, text, type) {
         const displaySafeText = type === 'audio' ? '🎙️ Áudio' : text;
         lastMsgSpan.innerText = displaySafeText;
         contactsList.prepend(card);
-
-        const contactIndex = savedContacts.findIndex(c => c.id === contactId);
-        if (contactIndex !== -1){
-            savedContacts[contactIndex].lastMsg = displaySafeText;
-            localStorage.setItem('savedContacts', JSON.stringify(savedContacts));
-        }
     }
 }
