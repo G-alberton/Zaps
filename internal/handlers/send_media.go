@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -29,11 +30,23 @@ func SendMedia(
 		}
 		defer file.Close()
 
+		contentType := header.Header.Get("Content-type")
+
 		to := r.FormValue("to")
 		caption := r.FormValue("caption")
 
 		filename := fmt.Sprintf("%d_%s", time.Now().Unix(), header.Filename)
-		filepath := filepath.Join("uploads/images", filename)
+
+		var folder string
+
+		if strings.HasPrefix(contentType, "image/") {
+			folder = "uploads/images"
+		} else if strings.HasPrefix(contentType, "audio/") {
+			folder = "uploads/audio"
+		} else {
+			folder = "uploads/files"
+		}
+		filepath := filepath.Join(folder, filename)
 
 		out, err := os.Create(filepath)
 		if err != nil {
@@ -46,10 +59,29 @@ func SendMedia(
 
 		publicURL := fmt.Sprintf("http://localhost:8080/uploads/images/%s", filename)
 
-		err = mediaService.SendImageByURL(to, publicURL, caption)
+		if strings.HasPrefix(contentType, "image/") {
+			err = mediaService.SendImageByURL(to, publicURL, caption)
+		} else if strings.HasPrefix(contentType, "audio/") {
+			mediaID, errUpload := mediaService.UploadMedia(filepath)
+			if errUpload != nil {
+				http.Error(w, errUpload.Error(), 500)
+				return
+			}
+
+			err = mediaService.SendAudioByID(to, mediaID)
+		}
+
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
+		}
+
+		msgType := "file"
+
+		if strings.HasPrefix(contentType, "image/") {
+			msgType = "image"
+		} else if strings.HasPrefix(contentType, "audio/") {
+			msgType = "audio"
 		}
 
 		conversationID := conversationService.GetOrCreate(to)
@@ -57,12 +89,14 @@ func SendMedia(
 		msg := models.Message{
 			From:           to,
 			ConversationID: conversationID,
-			Type:           "image",
+			Type:           msgType,
 			Body:           caption,
 			MediaID:        publicURL,
 			Direction:      "outbound",
 			Timestamp:      time.Now(),
 		}
+
+		os.MkdirAll(folder, os.ModePerm)
 
 		messageService.SaveMessage(msg)
 

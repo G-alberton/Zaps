@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -237,6 +239,95 @@ func (s *MediaService) SendImageByURL(to, imageURL, caption string) error {
 
 	body, _ := io.ReadAll(resp.Body)
 	log.Println("[SEND IMAGE]:", string(body))
+
+	return nil
+}
+
+func (s *MediaService) UploadMedia(filePath string) (string, error) {
+	url := fmt.Sprintf(
+		"https://graph.facebook.com/v22.0/%s/media",
+		s.PhoneNumberID,
+	)
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	var b bytes.Buffer
+	writer := multipart.NewWriter(&b)
+
+	part, err := writer.CreateFormFile("file", filepath.Base(filePath))
+	if err != nil {
+		return "", err
+	}
+
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return "", err
+	}
+
+	writer.WriteField("messaging_product", "whatsapp")
+	writer.Close()
+
+	req, err := http.NewRequest("POST", url, &b)
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+s.Token)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := s.Client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	log.Println("[UPLOAD MEDIA]:", string(body))
+
+	var result struct {
+		ID string `json: "id"`
+	}
+
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", err
+	}
+
+	return result.ID, nil
+}
+
+func (s *MediaService) SendAudioByID(to, mediaID string) error {
+	url := fmt.Sprintf(
+		"https://graph.facebook.com/v22.0/%s/messages",
+		s.PhoneNumberID,
+	)
+
+	payload := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"to":                to,
+		"type":              "audio",
+		"audio": map[string]string{
+			"id": mediaID,
+		},
+	}
+
+	jsonData, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req.Header.Set("Authorization", "Bearer "+s.Token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.Client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	log.Println("[SEND AUDIO]:", string(body))
 
 	return nil
 }

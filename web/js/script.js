@@ -5,6 +5,8 @@ let currentTarget = null;
 let timerInterval;
 let seconds = 0;
 let pendingFile = null;
+let mediaRecorder;
+let audioChunks = [];
 
 async function loadConversations(params) {
     try{
@@ -525,7 +527,7 @@ async function sendMessage() {
 
     if (pendingFile) {
         const type = pendingFile.type.startsWith('image/') ? 'image' : 'file';
-        const content = msg.type === "image" ? msg.media_id : msg.boody;
+        const content = pendingFile.name
         
         renderAndSave(content, time, type, 'sent', text);
 
@@ -630,7 +632,7 @@ function startTimer() {
     }, 1000);
 }
 
-function startRec(e){
+async function startRec(e){
     if (e.cancelable) e.preventDefault();
     const audioBtn = document.querySelector('.audio-button');
     audioBtn.classList.add('recording');
@@ -638,9 +640,78 @@ function startRec(e){
     document.getElementById('chat-input').style.visibility = 'hidden';
     document.getElementById('recording-status').setAttribute('style', 'display: flex !important');
     startTimer();
+
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = e => {
+        audioChunks.push(e.data);
+    };
+
+    mediaRecorder.start();
 }
 
 function stopRec() {
+    const audioBtn = document.querySelector('.audio-button');
+    if (!audioBtn.classList.contains('recording')) return;
+
+    mediaRecorder.stop();
+
+    mediaRecorder.onstop = async () => {
+        const blob = new Blob(audioChunks, { type: 'audio/ogg' });
+
+        // 🔥 criar URL local pra tocar o áudio
+        const audioURL = URL.createObjectURL(blob);
+
+        const now = new Date();
+        const time = now.getHours().toString().padStart(2, '0') + ":" + 
+                     now.getMinutes().toString().padStart(2, '0');
+
+        // 🔥 renderizar com áudio real
+        const container = document.querySelector('.messages-container');
+        const row = document.createElement('div');
+        row.classList.add('message-row', 'message-sent');
+
+        row.innerHTML = `
+            <div class="message-bubble audio-bubble">
+                <audio controls src="${audioURL}" style="width:200px;"></audio>
+                <span class="message-time">${time}</span>
+            </div>
+        `;
+
+        container.appendChild(row);
+        scrollToBottom();
+
+        // 🔥 envia pro backend
+        const formData = new FormData();
+        formData.append("file", blob, "audio.ogg");
+        formData.append("to", activeContact);
+
+        try {
+            await fetch("http://localhost:8080/send-media", {
+                method: "POST",
+                body: formData
+            });
+
+            console.log("Áudio enviado");
+
+        } catch (err) {
+            console.error("Erro ao enviar áudio:", err);
+        }
+    };
+
+    // UI reset
+    audioBtn.classList.remove('recording');
+    audioBtn.innerHTML = "🎙️";
+    document.getElementById('chat-input').style.visibility = 'visible';
+    document.getElementById('recording-status').style.display = 'none';
+
+    clearInterval(timerInterval);
+}
+
+/*function stopRec() {
     const audioBtn = document.querySelector('.audio-button');
     if (!audioBtn.classList.contains('recording')) return;
 
@@ -667,7 +738,7 @@ function stopRec() {
         }
         scrollToBottom();
     }
-}
+}*/
 
 function toggleInputButtons(text) {
     const hasText = text.length > 0;
