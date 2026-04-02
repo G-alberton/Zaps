@@ -525,22 +525,19 @@ async function sendMessage() {
 
     if (pendingFile) {
         const type = pendingFile.type.startsWith('image/') ? 'image' : 'file';
-        const content = type === 'image' ? pendingFile.base64 : pendingFile.name;
+        const content = msg.type === "image" ? msg.media_id : msg.boody;
         
         renderAndSave(content, time, type, 'sent', text);
 
+        const formData = new FormData();
+        formData.append("file", pendingFile);
+        formData.append("to", activeContact);
+        formData.append("caption",text);
+
         await fetch("http://localhost:8080/send-media", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                to: activeContact,
-                file: pendingFile.base64,
-                type: "image"
-            })
+            body: formData
         })
-
 
         pendingFile = null;
         chatInput.placeholder = "Digite uma Mensagem";

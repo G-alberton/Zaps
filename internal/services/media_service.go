@@ -21,7 +21,7 @@ type MediaService struct {
 }
 
 func NewMediaService() *MediaService {
-	_ = godotenv.Load()
+	_ = godotenv.Load("../../.env")
 
 	return &MediaService{
 		Token:         os.Getenv("WHATSAPP_TOKEN"),
@@ -137,6 +137,9 @@ func (s *MediaService) SendTextMessage(to, body string) error {
 		s.PhoneNumberID,
 	)
 
+	log.Println("Phone_Number_ID:", s.PhoneNumberID)
+	log.Println("Token:", s.Token)
+
 	payload := map[string]interface{}{
 		"messaging_product": "whatsapp",
 		"to":                to,
@@ -201,4 +204,39 @@ func getExtension(mime string) string {
 	default:
 		return ".bin"
 	}
+}
+
+func (s *MediaService) SendImageByURL(to, imageURL, caption string) error {
+	url := fmt.Sprintf(
+		"https://graph.facebook.com/v22.0/%s/messages",
+		s.PhoneNumberID,
+	)
+
+	payload := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"to":                to,
+		"type":              "image",
+		"image": map[string]string{
+			"link":    imageURL,
+			"caption": caption,
+		},
+	}
+
+	jsonData, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req.Header.Set("Authorization", "Bearer "+s.Token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.Client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	log.Println("[SEND IMAGE]:", string(body))
+
+	return nil
 }

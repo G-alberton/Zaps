@@ -72,6 +72,14 @@ func main() {
 
 	mux.HandleFunc("/mark-as-read", handlers.MarkAsRead(messageService))
 
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+
+	mux.HandleFunc("/send-media", handlers.SendMedia(
+		mediaService,
+		messageService,
+		conversationService,
+	))
+
 	server := &http.Server{
 		Addr:         ":8080",
 		Handler:      loggingMiddleware(enableCORS(mux)),
