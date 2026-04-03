@@ -45,6 +45,7 @@ func HandleWebhook(
 	messageService *services.MessageService,
 	mediaService *services.MediaService,
 	conversationService *services.ConversationService,
+	q *queue.Queue,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -73,14 +74,16 @@ func HandleWebhook(
 			// resposta rápida pro WhatsApp
 			w.WriteHeader(http.StatusOK)
 
-			go processEvent(
-				ctx,
-				event,
-				contactService,
-				messageService,
-				mediaService,
-				conversationService,
-			)
+			q.Add(func() {
+				processEvent(
+					ctx,
+					event,
+					contactService,
+					messageService,
+					mediaService,
+					conversationService,
+				)
+			})
 
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

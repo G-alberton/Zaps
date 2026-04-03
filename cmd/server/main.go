@@ -13,6 +13,10 @@ import (
 	"ZAPS/internal/webhook"
 )
 
+q := queue.NewQueue(100) 
+q.Start(5) 
+
+
 func enableCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
