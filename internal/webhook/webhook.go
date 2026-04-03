@@ -3,6 +3,7 @@ package webhook
 import (
 	"ZAPS/internal/models"
 	"ZAPS/internal/services"
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -57,6 +58,8 @@ func HandleWebhook(
 		case http.MethodPost:
 			defer r.Body.Close()
 
+			ctx := r.Context()
+
 			r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 			var event Event
@@ -67,9 +70,17 @@ func HandleWebhook(
 				return
 			}
 
+			// resposta rápida pro WhatsApp
 			w.WriteHeader(http.StatusOK)
 
-			go processEvent(event, contactService, messageService, mediaService, conversationService)
+			go processEvent(
+				ctx,
+				event,
+				contactService,
+				messageService,
+				mediaService,
+				conversationService,
+			)
 
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -78,6 +89,7 @@ func HandleWebhook(
 }
 
 func processEvent(
+	ctx context.Context,
 	event Event,
 	contactService *services.ContactService,
 	messageService *services.MessageService,
@@ -85,8 +97,18 @@ func processEvent(
 	conversationService *services.ConversationService,
 ) {
 
+	if len(event.Entry) == 0 {
+		log.Println("Webhook vazio (sem entry)")
+		return
+	}
+
 	for _, entry := range event.Entry {
+
 		for _, change := range entry.Changes {
+
+			if change.Value.Messages == nil {
+				continue
+			}
 
 			contactsMap := map[string]string{}
 
@@ -95,7 +117,9 @@ func processEvent(
 			}
 
 			for _, msg := range change.Value.Messages {
+
 				processMessage(
+					ctx,
 					msg,
 					contactsMap,
 					contactService,
@@ -109,6 +133,7 @@ func processEvent(
 }
 
 func processMessage(
+	ctx context.Context,
 	msg Message,
 	contactsMap map[string]string,
 	contactService *services.ContactService,
@@ -121,18 +146,20 @@ func processMessage(
 	if !ok {
 		name = "Unknown"
 	}
+
 	conversationID := conversationService.GetOrCreate(msg.From)
 
-	log.Println("Recebido de:", msg.From, name)
+	log.Printf("Recebido de: %s (%s)", msg.From, name)
 
 	if err := contactService.SaveContact(msg.From, name); err != nil {
-		log.Println("Erro ao salvar contato:", err)
+		log.Printf("Erro ao salvar contato (%s): %v", msg.From, err)
 	}
 
 	var body string
 	var mediaID string
 
 	switch msg.Type {
+
 	case "text":
 		if msg.Text != nil {
 			body = msg.Text.Body
@@ -154,11 +181,13 @@ func processMessage(
 		}
 	}
 
+	// 🔥 download com context
 	if mediaID != "" {
-		if filePath, err := mediaService.DownloadByID(mediaID, msg.Type); err != nil {
-			log.Println("Erro ao baixar mídia:", err)
+		filePath, err := mediaService.DownloadByID(ctx, mediaID, msg.Type)
+		if err != nil {
+			log.Printf("Erro ao baixar mídia (%s): %v", mediaID, err)
 		} else {
-			log.Println("Mídia salva em:", filePath)
+			log.Printf("Mídia salva em: %s", filePath)
 		}
 	}
 
@@ -182,6 +211,6 @@ func processMessage(
 	}
 
 	if err := messageService.SaveMessage(message); err != nil {
-		log.Println("Erro ao salvar mensagem:", err)
+		log.Printf("Erro ao salvar mensagem (%s): %v", msg.ID, err)
 	}
 }

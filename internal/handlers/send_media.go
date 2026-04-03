@@ -1,23 +1,14 @@
-package handlers
-
-import (
-	"ZAPS/internal/models"
-	"ZAPS/internal/services"
-	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
-)
-
 func SendMedia(
 	mediaService *services.MediaService,
 	messageService *services.MessageService,
 	conversationService *services.ConversationService,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		ctx := r.Context()
+
+		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -25,52 +16,107 @@ func SendMedia(
 
 		file, header, err := r.FormFile("file")
 		if err != nil {
-			http.Error(w, "error ao ler arquivo", http.StatusBadRequest)
+			http.Error(w, "erro ao ler arquivo", http.StatusBadRequest)
 			return
 		}
 		defer file.Close()
 
-		contentType := header.Header.Get("Content-Type")
+		if header.Size == 0 {
+			http.Error(w, "arquivo vazio", http.StatusBadRequest)
+			return
+		}
 
-		to := r.FormValue("to")
+		// 🔥 leitura segura
+		buffer := make([]byte, 512)
+		n, err := file.Read(buffer)
+		if err != nil && err != io.EOF {
+			http.Error(w, "erro ao ler arquivo", 500)
+			return
+		}
+
+		if n == 0 {
+			http.Error(w, "arquivo inválido", 400)
+			return
+		}
+
+		realType := http.DetectContentType(buffer[:n])
+
+		// 🔥 reset do ponteiro
+		_, err = file.Seek(0, io.SeekStart)
+		if err != nil {
+			http.Error(w, "erro ao reposicionar arquivo", 500)
+			return
+		}
+
+		// 🔥 valida tipo
+		if !strings.HasPrefix(realType, "image/") &&
+			!strings.HasPrefix(realType, "audio/") {
+			http.Error(w, "tipo de arquivo não permitido", 400)
+			return
+		}
+
+		to := strings.TrimSpace(r.FormValue("to"))
 		caption := r.FormValue("caption")
 
-		filename := fmt.Sprintf("%d_%s", time.Now().Unix(), header.Filename)
+		if to == "" {
+			http.Error(w, "destinatário obrigatório", http.StatusBadRequest)
+			return
+		}
+
+		// 🔥 nome seguro
+		filename := fmt.Sprintf("%d_%s",
+			time.Now().Unix(),
+			strings.ReplaceAll(filepath.Base(header.Filename), " ", "_"),
+		)
 
 		var folder string
-
-		if strings.HasPrefix(contentType, "image/") {
-			folder = "uploads/images"
-		} else if strings.HasPrefix(contentType, "audio/") {
-			folder = "uploads/audio"
+		if strings.HasPrefix(realType, "image/") {
+			folder = "images"
+		} else if strings.HasPrefix(realType, "audio/") {
+			folder = "audio"
 		} else {
-			folder = "uploads/files"
+			folder = "files"
 		}
-		filepath := filepath.Join(folder, filename)
 
-		os.MkdirAll(folder, os.ModePerm)
+		fullPath := filepath.Join("uploads", folder, filename)
 
-		out, err := os.Create(filepath)
+		// 🔥 cria diretório corretamente
+		if err := os.MkdirAll(filepath.Dir(fullPath), os.ModePerm); err != nil {
+			http.Error(w, "erro ao criar diretório", 500)
+			return
+		}
+
+		out, err := os.Create(fullPath)
 		if err != nil {
 			http.Error(w, "erro ao salvar arquivo", 500)
 			return
 		}
 		defer out.Close()
 
-		io.Copy(out, file)
+		if _, err = io.Copy(out, file); err != nil {
+			http.Error(w, "erro ao salvar arquivo", 500)
+			return
+		}
 
-		publicURL := fmt.Sprintf("http://localhost:8080/uploads/%s/%s",folder, filename)
+		publicURL := fmt.Sprintf("http://localhost:8080/uploads/%s/%s", folder, filename)
 
-		if strings.HasPrefix(contentType, "image/") {
-			err = mediaService.SendImageByURL(to, publicURL, caption)
-		} else if strings.HasPrefix(contentType, "audio/") {
-			mediaID, errUpload := mediaService.UploadMedia(filepath)
+		var mediaID string
+
+		if strings.HasPrefix(realType, "image/") {
+
+			err = mediaService.SendImageByURL(ctx, to, publicURL, caption)
+			mediaID = publicURL
+
+		} else if strings.HasPrefix(realType, "audio/") {
+
+			mediaIDUpload, errUpload := mediaService.UploadMedia(ctx, fullPath)
 			if errUpload != nil {
 				http.Error(w, errUpload.Error(), 500)
 				return
 			}
 
-			err = mediaService.SendAudioByID(to, mediaID)
+			err = mediaService.SendAudioByID(ctx, to, mediaIDUpload)
+			mediaID = mediaIDUpload
 		}
 
 		if err != nil {
@@ -79,10 +125,9 @@ func SendMedia(
 		}
 
 		msgType := "file"
-
-		if strings.HasPrefix(contentType, "image/") {
+		if strings.HasPrefix(realType, "image/") {
 			msgType = "image"
-		} else if strings.HasPrefix(contentType, "audio/") {
+		} else if strings.HasPrefix(realType, "audio/") {
 			msgType = "audio"
 		}
 
@@ -93,7 +138,8 @@ func SendMedia(
 			ConversationID: conversationID,
 			Type:           msgType,
 			Body:           "",
-			MediaID:        publicURL,
+			MediaID:        mediaID,
+			MediaURL:       publicURL,
 			Direction:      "outbound",
 			Timestamp:      time.Now(),
 		}
@@ -101,10 +147,8 @@ func SendMedia(
 		messageService.SaveMessage(msg)
 
 		w.Header().Set("Content-Type", "application/json")
-
 		json.NewEncoder(w).Encode(map[string]string{
-			"url": publicURL
+			"url": publicURL,
 		})
-
 	}
 }
