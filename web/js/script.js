@@ -48,11 +48,25 @@ async function loadMessages(conversationID){
                 side === 'sent' ? 'message-sent' : 'message-received'
             );
 
+            // 🔥 LÓGICA CORRETA AQUI
+            let content = "";
+            let caption = "";
+
+            if (msg.type === "audio") {
+                content = msg.media_url;
+            } else if (msg.type === "image") {
+                content = msg.media_url;
+                caption = msg.body;
+            } else {
+                content = msg.body;
+            }
+
             row.innerHTML = createMessageHTML(
-                msg.body,
+                content,
                 new Date(msg.timestamp).toLocaleTimeString().slice(0,5),
                 msg.type,
-                side
+                side,
+                caption
             );
 
             container.appendChild(row);
@@ -60,8 +74,8 @@ async function loadMessages(conversationID){
 
         scrollToBottom();
 
-        } catch (err) {
-            console.error("Erro ao carregar mensagens:", err);
+    } catch (err) {
+        console.error("Erro ao carregar mensagens:", err);
     }
 }
 
@@ -426,7 +440,6 @@ function handleContactClick(card, name, id, e) {
         document.querySelector('.sidebar')?.classList.add('hidden');
     }
 
-    activeContact = id;
     loadMessages(id);
 }
 
@@ -479,15 +492,20 @@ function createMessageHTML(content = "", time = "", type = "text", side = "sent"
             </div>
         `
     } else if (type === 'audio') {
-        mainContentHTML = `
-            <div class="audio-player-container">
-                <button class="audio-play-btn">${playSymbol}</button>
-                <div class="audio-controls">
-                    <div class="audio-waveform"><div class="audio-progress"></div></div>
-                    <div class="audio-meta"><span class="audio-duration">${safeContent}</span></div>
-                </div>
-            </div>`;
-    } else {
+    mainContentHTML = `
+    <div class="audio-player-container" data-audio="${content}">
+        <button class="audio-play-btn">▶</button>
+
+        <div class="audio-wave">
+            <div class="audio-progress"></div>
+        </div>
+
+        <span class="audio-duration">00:00</span>
+
+        <audio src="${content}"></audio>
+    </div>
+    `;
+    }else {
         mainContentHTML = `<div class="message-text">${safeContent}</div>`;
     }
 
@@ -529,8 +547,6 @@ async function sendMessage() {
         const type = pendingFile.type.startsWith('image/') ? 'image' : 'file';
         const content = pendingFile.name
         
-        renderAndSave(content, time, type, 'sent', text);
-
         const formData = new FormData();
         formData.append("file", pendingFile);
         formData.append("to", activeContact);
@@ -540,6 +556,7 @@ async function sendMessage() {
             method: "POST",
             body: formData
         })
+        await loadMessages(activeContact)
 
         pendingFile = null;
         chatInput.placeholder = "Digite uma Mensagem";
@@ -575,33 +592,18 @@ async function sendMessage() {
     }
 }
 
-/*function sendMessage() {
-    const chatInput = document.getElementById('chat-input');
-    const text = chatInput.value.trim();
-    const now = new Date();
-    const time = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+function toggleInputButtons(text) {
+    const sendBtn = document.querySelector('.send-button');
+    const audioBtn = document.querySelector('.audio-button');
 
-    if (pendingFile) {
-        const type = pendingFile.type.startsWith('image/') ? 'image' : 'file';
-        const content = type === 'image' ? pendingFile.base64 : pendingFile.name;
-
-        renderAndSave(content, time, type, 'sent', text);
-
-        pendingFile = null;
-        chatInput.placeholder = "Digite uma Mensagem";
-    } 
-
-    else if (text !== "") {
-        renderAndSave(text, time, 'text', 'sent');
-        
-        chatInput.value = "";
-        chatInput.style.height = 'auto';
-        toggleInputButtons("");
-
-        setTimeout(() => receiveMessage("Resposta automática", "text"), 1500);
-        setTimeout(() => receiveMessage("0:05", "audio"), 3000);
+    if (text.length > 0) {
+        sendBtn.style.display = 'block';
+        audioBtn.style.display = 'none';
+    } else {
+        sendBtn.style.display = 'none';
+        audioBtn.style.display = 'block';
     }
-}*/
+}
 
 function receiveMessage(content, type = 'text') {
     const now = new Date();
@@ -660,47 +662,37 @@ function stopRec() {
     mediaRecorder.stop();
 
     mediaRecorder.onstop = async () => {
-        const blob = new Blob(audioChunks, { type: 'audio/ogg' });
-
-        // 🔥 criar URL local pra tocar o áudio
-        const audioURL = URL.createObjectURL(blob);
+        const blob = new Blob(audioChunks, {type: 'audio/ogg' });
 
         const now = new Date();
         const time = now.getHours().toString().padStart(2, '0') + ":" + 
                      now.getMinutes().toString().padStart(2, '0');
 
-        // 🔥 renderizar com áudio real
-        const container = document.querySelector('.messages-container');
-        const row = document.createElement('div');
-        row.classList.add('message-row', 'message-sent');
-
-        row.innerHTML = `
-            <div class="message-bubble audio-bubble">
-                <audio controls src="${audioURL}" style="width:200px;"></audio>
-                <span class="message-time">${time}</span>
-            </div>
-        `;
-
-        container.appendChild(row);
-        scrollToBottom();
-
-        // 🔥 envia pro backend
         const formData = new FormData();
         formData.append("file", blob, "audio.ogg");
         formData.append("to", activeContact);
 
         try {
-            await fetch("http://localhost:8080/send-media", {
+            const res = await fetch("http://localhost:8080/send-media", {
                 method: "POST",
                 body: formData
             });
 
-            console.log("Áudio enviado");
+            const data = await res.json();
+
+            await loadMessages(activeContact)
+
+            const audioURL = data.url;
+
+            const container = document.querySelector('.messages-container');
+
+            scrollToBottom();
+            console.log("Audio enviado e renderizado com URL real");
 
         } catch (err) {
-            console.error("Erro ao enviar áudio:", err);
+            console.error("Error ao enviar áudio:", err)
         }
-    };
+    }
 
     // UI reset
     audioBtn.classList.remove('recording');
@@ -709,43 +701,6 @@ function stopRec() {
     document.getElementById('recording-status').style.display = 'none';
 
     clearInterval(timerInterval);
-}
-
-/*function stopRec() {
-    const audioBtn = document.querySelector('.audio-button');
-    if (!audioBtn.classList.contains('recording')) return;
-
-    audioBtn.classList.remove('recording');
-    audioBtn.innerHTML = "🎙️";
-    document.getElementById('chat-input').style.visibility = 'visible';
-    document.getElementById('recording-status').setAttribute('style', 'display: none !important');
-
-    const finalTime = document.getElementById('recording-timer').innerText;
-    clearInterval(timerInterval);
-
-    if (seconds > 0) {
-        const now = new Date();
-        const time = now.getHours() + ":" + now.getMinutes().toString().padStart(2, '0');
-        const messagesContainer = document.querySelector('.messages-container');
-        
-        const messageRow = document.createElement('div');
-        messageRow.classList.add('message-row', 'message-sent'); 
-        messageRow.innerHTML = createMessageHTML(finalTime, time, 'audio');
-        
-        messagesContainer.appendChild(messageRow);
-        if (activeContact){
-            updateLastMsgDisplay(activeContact, finalTime, 'audio');
-        }
-        scrollToBottom();
-    }
-}*/
-
-function toggleInputButtons(text) {
-    const hasText = text.length > 0;
-    const audioBtn = document.querySelector('.audio-button');
-    const sendBtn = document.querySelector('.send-button');
-    audioBtn.style.display = hasText ? 'none' : 'flex';
-    sendBtn.style.display = hasText ? 'flex' : 'none';
 }
 
 function scrollToBottom() {
@@ -814,19 +769,31 @@ async function handleFiles(files) {
     previewModal.classList.add('active');
 }
 
-document.getElementById('confirm-send-btn').onclick = () => {
-    const caption = document.getElementById('media-caption').value.trim();
-    const now = new Date(); 
-    const time = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+document.getElementById('confirm-send-btn').onclick = async () => {
+    if (!pendingFile || !activeContact) return;
 
-    const type = pendingFile.type.startsWith('image/') ? 'image' : 'file';
-    const content = type === 'image' ? pendingFile.base64 : pendingFile.name;
-    
-    renderAndSave(content, time, type, 'sent', caption);
+    const caption = document.getElementById('media-caption').value.trim();
+
+    const formData = new FormData();
+    formData.append("file", pendingFile);
+    formData.append("to", activeContact);
+    formData.append("caption", caption);
+
+    try {
+        await fetch("http://localhost:8080/send-media", {
+            method: "POST",
+            body: formData
+        });
+
+        await loadMessages(activeContact);
+
+    } catch (err) {
+        console.error("Erro ao enviar mídia:", err);
+    }
 
     document.getElementById('media-preview-modal').style.display = 'none';
     document.getElementById('media-preview-modal').classList.remove('active');
-    pendingFile = null; 
+    pendingFile = null;
 };
 
 function sendMediaMessage(content, time, type) {
@@ -858,36 +825,37 @@ function handleAudioPlay(e) {
     if (!playBtn) return;
 
     const container = playBtn.closest('.audio-player-container');
+    const audio = container.querySelector('audio');
     const progressBar = container.querySelector('.audio-progress');
-    const durationText = container.querySelector('.audio-duration').innerHTML;
+    const durationText = container.querySelector('.audio-duration');
 
-    const parts = durationText.split(':');
-    const totalSeconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    if (!audio) return;
 
-    if (playBtn.innerText === "▶") {
+    // ⏱️ Atualiza duração
+    audio.onloadedmetadata = () => {
+        const mins = Math.floor(audio.duration / 60).toString().padStart(2, '0');
+        const secs = Math.floor(audio.duration % 60).toString().padStart(2, '0');
+        durationText.innerText = `${mins}:${secs}`;
+    };
+
+    // ▶️ PLAY / PAUSE
+    if (audio.paused) {
+        audio.play();
         playBtn.innerText = "⏸";
 
-        let currentPercent = 0;
-        const intervalTime = 100;
-        const increment = (100 / (totalSeconds * 1000)) * intervalTime;
+        audio.ontimeupdate = () => {
+            const percent = (audio.currentTime / audio.duration) * 100;
+            progressBar.style.width = percent + "%";
+        };
 
-        if (playBtn.dataset.intervalId) clearInterval(playBtn.dataset.intervalId);
+        audio.onended = () => {
+            playBtn.innerText = "▶";
+            progressBar.style.width = "0%";
+        };
 
-        const animation = setInterval(() => {
-            currentPercent += increment;
-            if (currentPercent >= 100) {
-                currentPercent = 100;
-                clearInterval(animation);
-                playBtn.innerText = "▶";
-                setTimeout(() => {progressBar.style.width = "0%";}, 500);
-            }
-            progressBar.style.width = currentPercent + "%";
-        }, intervalTime);
-
-        playBtn.dataset.intervalId = animation;
     } else {
+        audio.pause();
         playBtn.innerText = "▶";
-        if (playBtn.dataset.intervalId) clearInterval(parseInt(playBtn.dataset.intervalId));
     }
 }
 

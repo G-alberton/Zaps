@@ -30,7 +30,7 @@ func SendMedia(
 		}
 		defer file.Close()
 
-		contentType := header.Header.Get("Content-type")
+		contentType := header.Header.Get("Content-Type")
 
 		to := r.FormValue("to")
 		caption := r.FormValue("caption")
@@ -48,6 +48,8 @@ func SendMedia(
 		}
 		filepath := filepath.Join(folder, filename)
 
+		os.MkdirAll(folder, os.ModePerm)
+
 		out, err := os.Create(filepath)
 		if err != nil {
 			http.Error(w, "erro ao salvar arquivo", 500)
@@ -57,7 +59,7 @@ func SendMedia(
 
 		io.Copy(out, file)
 
-		publicURL := fmt.Sprintf("http://localhost:8080/uploads/images/%s", filename)
+		publicURL := fmt.Sprintf("http://localhost:8080/uploads/%s/%s",folder, filename)
 
 		if strings.HasPrefix(contentType, "image/") {
 			err = mediaService.SendImageByURL(to, publicURL, caption)
@@ -90,17 +92,19 @@ func SendMedia(
 			From:           to,
 			ConversationID: conversationID,
 			Type:           msgType,
-			Body:           caption,
+			Body:           "",
 			MediaID:        publicURL,
 			Direction:      "outbound",
 			Timestamp:      time.Now(),
 		}
 
-		os.MkdirAll(folder, os.ModePerm)
-
 		messageService.SaveMessage(msg)
 
-		w.Write([]byte("ok"))
+		w.Header().Set("Content-Type", "application/json")
+
+		json.NewEncoder(w).Encode(map[string]string{
+			"url": publicURL
+		})
 
 	}
 }
