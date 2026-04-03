@@ -233,6 +233,52 @@ func (s *MediaService) SendImageByURL(ctx context.Context, to, imageURL, caption
 	return nil
 }
 
+func (s *MediaService) SendDocumentByID(ctx context.Context, to, mediaID, caption, filename string) error {
+	url := fmt.Sprintf(
+		"https://graph.facebook.com/v22.0/%s/messages",
+		s.PhoneNumberID,
+	)
+
+	payload := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"to":                to,
+		"type":              "document",
+		"document": map[string]string{
+			"id":       mediaID,
+			"caption":  caption,
+			"filename": filename,
+		},
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+s.Token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.Client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	log.Println("[SEND DOCUMENT]:", string(body))
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("erro envio documento (%d): %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
 // ================= UPLOAD =================
 
 func (s *MediaService) UploadMedia(ctx context.Context, filePath string) (string, error) {

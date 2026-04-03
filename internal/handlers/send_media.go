@@ -41,6 +41,21 @@ func SendMedia(
 
 		realType := http.DetectContentType(buffer[:n])
 
+		// 🔥 valida tipos permitidos (image, audio, pdf)
+		if !strings.HasPrefix(realType, "image/") &&
+			!strings.HasPrefix(realType, "audio/") &&
+			realType != "application/pdf" {
+
+			http.Error(w, "tipo de arquivo não permitido", 400)
+			return
+		}
+
+		// 🔥 se for documento, restringe apenas PDF
+		if strings.HasPrefix(realType, "application/") && realType != "application/pdf" {
+			http.Error(w, "somente PDF permitido", 400)
+			return
+		}
+
 		// 🔥 reset do ponteiro
 		_, err = file.Seek(0, io.SeekStart)
 		if err != nil {
@@ -50,7 +65,8 @@ func SendMedia(
 
 		// 🔥 valida tipo
 		if !strings.HasPrefix(realType, "image/") &&
-			!strings.HasPrefix(realType, "audio/") {
+			!strings.HasPrefix(realType, "audio/") &&
+			!strings.HasPrefix(realType, "application/") {
 			http.Error(w, "tipo de arquivo não permitido", 400)
 			return
 		}
@@ -117,6 +133,23 @@ func SendMedia(
 
 			err = mediaService.SendAudioByID(ctx, to, mediaIDUpload)
 			mediaID = mediaIDUpload
+		} else if strings.HasPrefix(realType, "application/") {
+
+			mediaIDUpload, errUpload := mediaService.UploadMedia(ctx, fullPath)
+			if errUpload != nil {
+				http.Error(w, errUpload.Error(), 500)
+				return
+			}
+
+			err = mediaService.SendDocumentByID(
+				ctx,
+				to,
+				mediaIDUpload,
+				caption,
+				header.Filename,
+			)
+
+			mediaID = mediaIDUpload
 		}
 
 		if err != nil {
@@ -129,6 +162,8 @@ func SendMedia(
 			msgType = "image"
 		} else if strings.HasPrefix(realType, "audio/") {
 			msgType = "audio"
+		} else if strings.HasPrefix(realType, "application/"){
+			msgType = "document"
 		}
 
 		conversationID := conversationService.GetOrCreate(to)
