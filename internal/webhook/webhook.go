@@ -72,7 +72,6 @@ func HandleWebhook(
 				return
 			}
 
-			// resposta rápida pro WhatsApp
 			w.WriteHeader(http.StatusOK)
 
 			q.Add(queue.High, func() error {
