@@ -192,7 +192,6 @@ func processMessage(
 		}
 	}
 
-	// 🔥 download com context
 	if mediaID != "" {
 		filePath, err := mediaService.DownloadByID(ctx, mediaID, msg.Type)
 		if err != nil {
