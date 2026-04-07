@@ -26,7 +26,6 @@ func SendMedia(
 			return
 		}
 
-		// 🔥 leitura segura
 		buffer := make([]byte, 512)
 		n, err := file.Read(buffer)
 		if err != nil && err != io.EOF {
@@ -41,7 +40,6 @@ func SendMedia(
 
 		realType := http.DetectContentType(buffer[:n])
 
-		// 🔥 valida tipos permitidos (image, audio, pdf)
 		if !strings.HasPrefix(realType, "image/") &&
 			!strings.HasPrefix(realType, "audio/") &&
 			realType != "application/pdf" {
@@ -50,20 +48,17 @@ func SendMedia(
 			return
 		}
 
-		// 🔥 se for documento, restringe apenas PDF
 		if strings.HasPrefix(realType, "application/") && realType != "application/pdf" {
 			http.Error(w, "somente PDF permitido", 400)
 			return
 		}
 
-		// 🔥 reset do ponteiro
 		_, err = file.Seek(0, io.SeekStart)
 		if err != nil {
 			http.Error(w, "erro ao reposicionar arquivo", 500)
 			return
 		}
 
-		// 🔥 valida tipo
 		if !strings.HasPrefix(realType, "image/") &&
 			!strings.HasPrefix(realType, "audio/") &&
 			!strings.HasPrefix(realType, "application/") {
@@ -79,7 +74,6 @@ func SendMedia(
 			return
 		}
 
-		// 🔥 nome seguro
 		filename := fmt.Sprintf("%d_%s",
 			time.Now().Unix(),
 			strings.ReplaceAll(filepath.Base(header.Filename), " ", "_"),
@@ -96,7 +90,6 @@ func SendMedia(
 
 		fullPath := filepath.Join("uploads", folder, filename)
 
-		// 🔥 cria diretório corretamente
 		if err := os.MkdirAll(filepath.Dir(fullPath), os.ModePerm); err != nil {
 			http.Error(w, "erro ao criar diretório", 500)
 			return
@@ -162,7 +155,7 @@ func SendMedia(
 			msgType = "image"
 		} else if strings.HasPrefix(realType, "audio/") {
 			msgType = "audio"
-		} else if strings.HasPrefix(realType, "application/"){
+		} else if strings.HasPrefix(realType, "application/") {
 			msgType = "document"
 		}
 

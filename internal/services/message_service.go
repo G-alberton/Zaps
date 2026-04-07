@@ -62,21 +62,6 @@ func (s *MessageService) SaveMessage(msg models.Message) error {
 	return nil
 }
 
-/*func (s *MessageService) GetByConversation(conversationID string) []models.Message {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	var result []models.Message
-
-	for _, msg := range s.messages {
-		if msg.ConversationID == conversationID {
-			result = append(result, msg)
-		}
-	}
-
-	return result
-}*/
-
 func (s *MessageService) GetByConversation(conversationID string) []models.Message {
 	s.mu.Lock()
 	messagesCopy := make([]models.Message, len(s.messages))

@@ -40,8 +40,6 @@ type mediaResponse struct {
 	MimeType string `json:"mime_type"`
 }
 
-// ================= GET MEDIA =================
-
 func (s *MediaService) GetMediaURL(ctx context.Context, mediaID string) (string, string, error) {
 	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s", mediaID)
 
@@ -78,8 +76,6 @@ func (s *MediaService) GetMediaURL(ctx context.Context, mediaID string) (string,
 
 	return result.URL, result.MimeType, nil
 }
-
-// ================= DOWNLOAD =================
 
 func (s *MediaService) DownloadMedia(ctx context.Context, mediaURL, filePath string) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", mediaURL, nil)
@@ -138,8 +134,6 @@ func (s *MediaService) DownloadByID(ctx context.Context, mediaID, msgType string
 	return filePath, nil
 }
 
-// ================= SEND TEXT =================
-
 func (s *MediaService) SendTextMessage(ctx context.Context, to, bodyText string) error {
 	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", s.PhoneNumberID)
 
@@ -184,8 +178,6 @@ func (s *MediaService) SendTextMessage(ctx context.Context, to, bodyText string)
 
 	return nil
 }
-
-// ================= SEND IMAGE =================
 
 func (s *MediaService) SendImageByURL(ctx context.Context, to, imageURL, caption string) error {
 	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", s.PhoneNumberID)
@@ -279,8 +271,6 @@ func (s *MediaService) SendDocumentByID(ctx context.Context, to, mediaID, captio
 	return nil
 }
 
-// ================= UPLOAD =================
-
 func (s *MediaService) UploadMedia(ctx context.Context, filePath string) (string, error) {
 	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/media", s.PhoneNumberID)
 
@@ -348,8 +338,6 @@ func (s *MediaService) UploadMedia(ctx context.Context, filePath string) (string
 	return result.ID, nil
 }
 
-// ================= SEND AUDIO =================
-
 func (s *MediaService) SendAudioByID(ctx context.Context, to, mediaID string) error {
 	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", s.PhoneNumberID)
 
@@ -394,8 +382,6 @@ func (s *MediaService) SendAudioByID(ctx context.Context, to, mediaID string) er
 
 	return nil
 }
-
-// ================= UTILS =================
 
 func sanitize(name string) string {
 	replacer := strings.NewReplacer("/", "_", "\\", "_", " ", "_", ":", "_", "*", "_")
