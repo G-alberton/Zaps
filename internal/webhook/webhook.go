@@ -46,7 +46,7 @@ func HandleWebhook(
 	messageService *services.MessageService,
 	mediaService *services.MediaService,
 	conversationService *services.ConversationService,
-	q *queue.Queue,
+	q queue.JobQueue,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +75,7 @@ func HandleWebhook(
 			// resposta rápida pro WhatsApp
 			w.WriteHeader(http.StatusOK)
 
-			q.Add(func() error {
+			q.Add(queue.High, func() error {
 				defer func() {
 					if r := recover(); r != nil {
 						log.Println("panic no webhook", r)

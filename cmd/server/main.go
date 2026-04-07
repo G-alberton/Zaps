@@ -42,7 +42,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 
 func main() {
 
-	q := queue.NewQueue(100)
+	q := queue.NewPriorityQueue(100)
 	q.Start(5)
 
 	mediaService := services.NewMediaService()

@@ -1,26 +1,30 @@
 package queue
 
 import (
+	"fmt"
 	"log"
 	"time"
 )
 
-type Job func() error
-
 type Queue struct {
-	Jobs chan Job
+	Jobs chan JobFunc
 }
 
 func NewQueue(buffer int) *Queue {
 	return &Queue{
-		Jobs: make(chan Job, buffer),
+		Jobs: make(chan JobFunc, buffer),
 	}
 }
 
 func (q *Queue) Start(workers int) {
 	for i := 0; i < workers; i++ {
 		go func(workerID int) {
+
+			log.Printf("Worker %d iniciado\n", workerID)
+
 			for job := range q.Jobs {
+
+				log.Printf("Worker %d processando job\n", workerID)
 
 				var err error
 
@@ -29,8 +33,8 @@ func (q *Queue) Start(workers int) {
 					func() {
 						defer func() {
 							if r := recover(); r != nil {
-								log.Println("panic recuperado:", r)
-								err = nil
+								log.Printf("Worker %d panic recuperado: %v\n", workerID, r)
+								err = fmt.Errorf("panic: %v", r)
 							}
 						}()
 
@@ -41,14 +45,19 @@ func (q *Queue) Start(workers int) {
 						break
 					}
 
-					log.Println("retry:", retry, "erro:", err)
-					time.Sleep(1 * time.Second)
+					log.Printf("Worker %d retry %d erro: %v\n", workerID, retry+1, err)
+					time.Sleep(time.Duration(retry+1) * time.Second)
+				}
+
+				if err != nil {
+					log.Printf("Worker %d: job falhou após 3 tentativas: %v\n", workerID, err)
 				}
 			}
+
 		}(i)
 	}
 }
 
-func (q *Queue) Add(job Job) {
+func (q *Queue) Add(_ Priority, job JobFunc) {
 	q.Jobs <- job
 }
