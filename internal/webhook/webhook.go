@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"ZAPS/internal/models"
+	"ZAPS/internal/queue"
 	"ZAPS/internal/services"
 	"context"
 	"encoding/json"
@@ -74,7 +75,13 @@ func HandleWebhook(
 			// resposta rápida pro WhatsApp
 			w.WriteHeader(http.StatusOK)
 
-			q.Add(func() {
+			q.Add(func() error {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Println("panic no webhook", r)
+					}
+				}()
+
 				processEvent(
 					ctx,
 					event,
@@ -83,6 +90,7 @@ func HandleWebhook(
 					mediaService,
 					conversationService,
 				)
+				return nil
 			})
 
 		default:

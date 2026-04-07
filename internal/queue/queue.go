@@ -1,20 +1,11 @@
 package queue
 
+import (
+	"log"
+	"time"
+)
+
 type Job func() error
-err := job()
-if err != nil {
-	for retry := 0; retry < 3; retry++ {
-		err := job()
-
-		if err == nil {
-			break
-		}
-
-		log.Println("retry:", retry, "erro:", err)
-
-		time.Sleep(1 * time.Second)
-	}
-}
 
 type Queue struct {
 	Jobs chan Job
@@ -31,19 +22,27 @@ func (q *Queue) Start(workers int) {
 		go func(workerID int) {
 			for job := range q.Jobs {
 
+				var err error
+
 				for retry := 0; retry < 3; retry++ {
 
 					func() {
 						defer func() {
 							if r := recover(); r != nil {
-								
+								log.Println("panic recuperado:", r)
+								err = nil
 							}
 						}()
 
-						job()
+						err = job()
 					}()
 
-					break
+					if err == nil {
+						break
+					}
+
+					log.Println("retry:", retry, "erro:", err)
+					time.Sleep(1 * time.Second)
 				}
 			}
 		}(i)

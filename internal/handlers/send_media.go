@@ -1,3 +1,18 @@
+package handlers
+
+import (
+	"ZAPS/internal/models"
+	"ZAPS/internal/services"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+)
+
 func SendMedia(
 	mediaService *services.MediaService,
 	messageService *services.MessageService,

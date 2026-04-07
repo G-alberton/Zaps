@@ -21,6 +21,9 @@ func SendMessage(
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		ctx := r.Context()
+
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -41,7 +44,7 @@ func SendMessage(
 
 		log.Println("[SEND] Para:", req.To, "| Msg:", req.Body)
 
-		err = mediaService.SendTextMessage(req.To, req.Body)
+		err = mediaService.SendTextMessage(ctx, req.To, req.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -70,8 +73,13 @@ func SendMessage(
 			"to":              req.To,
 			"body":            req.Body,
 		})
-		if err != nil {
-			log.Println("Erro ao retornar resposta:", err)
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":          "ok",
+			"conversation_id": conversationID,
+			"to":              req.To,
+			"body":            req.Body,
+		}); err != nil {
+			log.Println("erro ao retornar resposta:", err)
 		}
 	}
 
