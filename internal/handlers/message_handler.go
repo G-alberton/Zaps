@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"ZAPS/internal/pagination"
 	"ZAPS/internal/services"
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 type MessageResponse struct {
@@ -65,5 +68,47 @@ func MarkAsRead(messageService *services.MessageService) http.HandlerFunc {
 		messageService.MarkAsRead(conversationID)
 
 		w.Write([]byte("ok"))
+	}
+}
+
+func ListMessagesPaginated(messageService *services.MessageService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		limitStr := r.URL.Query().Get("limit")
+		cursorStr := r.URL.Query().Get("cursor")
+		conversationID := r.URL.Query().Get("conversation_id")
+
+		if conversationID == "" {
+			http.Error(w, "conversation_id is required", http.StatusBadRequest)
+			return
+		}
+
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil {
+			limit = 10
+		}
+
+		var cursor time.Time
+		if cursorStr != "" {
+			cursor, err = time.Parse(time.RFC3339, cursorStr)
+			if err != nil {
+				http.Error(w, "invalid cursor format", http.StatusBadRequest)
+				return
+			}
+		}
+
+		p := pagination.Pagination{
+			Limit:  limit,
+			Cursor: cursor,
+		}
+
+		result, err := messageService.ListMessagesByConversationPaginated(conversationID, p)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(result)
 	}
 }

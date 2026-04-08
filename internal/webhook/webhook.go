@@ -60,8 +60,6 @@ func HandleWebhook(
 		case http.MethodPost:
 			defer r.Body.Close()
 
-			ctx := r.Context()
-
 			r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 			var event Event
@@ -75,14 +73,12 @@ func HandleWebhook(
 			w.WriteHeader(http.StatusOK)
 
 			q.Add(queue.High, func() error {
-				defer func() {
-					if r := recover(); r != nil {
-						log.Println("panic no webhook", r)
-					}
-				}()
+
+				jobCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
 
 				processEvent(
-					ctx,
+					jobCtx,
 					event,
 					contactService,
 					messageService,
@@ -159,7 +155,8 @@ func processMessage(
 
 	conversationID := conversationService.GetOrCreate(msg.From)
 
-	log.Printf("Recebido de: %s (%s)", msg.From, name)
+	log.Printf("📩 MsgID: %s | From: %s (%s) | Type: %s",
+		msg.ID, msg.From, name, msg.Type)
 
 	if err := contactService.SaveContact(msg.From, name); err != nil {
 		log.Printf("Erro ao salvar contato (%s): %v", msg.From, err)
@@ -171,7 +168,7 @@ func processMessage(
 	switch msg.Type {
 
 	case "text":
-		if msg.Text != nil {
+		if msg.Text != nil && msg.Text.Body != "" {
 			body = msg.Text.Body
 		}
 
@@ -206,7 +203,13 @@ func processMessage(
 		tsInt = time.Now().Unix()
 	}
 
-	timestamp := time.Unix(tsInt, 0)
+	var timestamp time.Time
+
+	if tsInt > 1e12 {
+		timestamp = time.UnixMilli(tsInt)
+	} else {
+		timestamp = time.Unix(tsInt, 0)
+	}
 
 	message := models.Message{
 		ID:             msg.ID,

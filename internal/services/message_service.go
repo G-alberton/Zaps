@@ -2,6 +2,7 @@ package services
 
 import (
 	"ZAPS/internal/models"
+	"ZAPS/internal/pagination"
 	"ZAPS/internal/repository"
 	"fmt"
 	"log"
@@ -136,4 +137,67 @@ func (s *MessageService) MarkAsRead(conversationID string) {
 			s.messages[i].Direction = "read"
 		}
 	}
+}
+
+func (s *MessageService) ListMessagesPaginated(p pagination.Pagination) (pagination.Response[models.Message], error) {
+
+	p.Normalize()
+
+	messages, err := s.repo.ListPaginated(p.Cursor, p.Limit+1)
+	if err != nil {
+		return pagination.Response[models.Message]{}, fmt.Errorf("repository not initialized")
+	}
+
+	hasMore := false
+	if len(messages) > p.Limit {
+		hasMore = true
+		messages = messages[:p.Limit]
+	}
+
+	var nextCursor *time.Time
+	if len(messages) > 0 {
+		t := messages[len(messages)-1].Timestamp
+		nextCursor = &t
+	}
+
+	return pagination.Response[models.Message]{
+		Data:       messages,
+		NextCursor: nextCursor,
+		HasMore:    hasMore,
+	}, nil
+}
+
+func (s *MessageService) ListMessagesByConversationPaginated(
+	conversationID string,
+	p pagination.Pagination,
+) (pagination.Response[models.Message], error) {
+
+	p.Normalize()
+
+	messages, err := s.repo.ListPaginatedByConversation(
+		conversationID,
+		p.Cursor,
+		p.Limit+1,
+	)
+	if err != nil {
+		return pagination.Response[models.Message]{}, err
+	}
+
+	hasMore := false
+	if len(messages) > p.Limit {
+		hasMore = true
+		messages = messages[:p.Limit]
+	}
+
+	var nextCursor *time.Time
+	if len(messages) > 0 {
+		t := messages[len(messages)-1].Timestamp
+		nextCursor = &t
+	}
+
+	return pagination.Response[models.Message]{
+		Data:       messages,
+		NextCursor: nextCursor,
+		HasMore:    hasMore,
+	}, nil
 }

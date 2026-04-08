@@ -42,6 +42,8 @@ func loggingMiddleware(next http.Handler) http.Handler {
 
 func main() {
 
+	//messageRepo := repository.NewMessageRepository(nil)
+
 	q := queue.NewPriorityQueue(100)
 	q.Start(5)
 
@@ -67,6 +69,8 @@ func main() {
 	))
 
 	mux.HandleFunc("/messages", handlers.GetMessages(messageService))
+
+	mux.HandleFunc("/messages/paginated", handlers.ListMessagesPaginated(messageService))
 
 	mux.HandleFunc("/conversations", handlers.GetConversations(
 		conversationService,
