@@ -3,9 +3,11 @@ package websocket
 import "sync"
 
 type Hub struct {
-	clients   map[*Client]bool
-	broadcast chan []byte
-	mu        sync.Mutex
+	clients    map[*Client]bool
+	broadcast  chan []byte
+	mu         sync.Mutex
+	Register   chan *Client
+	Unregister chan *Client
 }
 
 func newHub() *Hub {

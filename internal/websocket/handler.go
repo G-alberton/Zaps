@@ -6,12 +6,18 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
 func websocketHandler(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, _ := upgrader.Upgrade(w, r, nil)
 
 	client := &Client{
-		Conn: conn,
-		Send: make(chan []byte),
+		conn: conn,
+		send: make(chan []byte),
 	}
 
 	hub.Register <- client
@@ -28,7 +34,7 @@ func websocketHandler(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	}()
 
 	go func() {
-		for msg := range client.Send {
+		for msg := range client.send {
 			conn.WriteMessage(websocket.TextMessage, msg)
 		}
 	}()
