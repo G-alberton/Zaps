@@ -20,6 +20,8 @@ func ServerWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("🔌 Nova conexão WS - conversa: %s", conversationID)
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Erro ao fazer upgrade:", err)
@@ -30,7 +32,7 @@ func ServerWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		conn:           conn,
 		send:           make(chan []byte, 256),
 		hub:            hub,
-		ConversationID: conversationID,
+		conversationID: conversationID,
 	}
 
 	hub.Register <- client
