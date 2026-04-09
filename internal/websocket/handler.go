@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -12,30 +13,21 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func websocketHandler(hub *Hub, w http.ResponseWriter, r *http.Request) {
-	conn, _ := upgrader.Upgrade(w, r, nil)
+func ServerWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Erro ao fazer upgrade:", err)
+		return
+	}
 
 	client := &Client{
 		conn: conn,
-		send: make(chan []byte),
+		send: make(chan []byte, 256),
+		hub:  hub,
 	}
 
 	hub.Register <- client
 
-	go func() {
-		for {
-			_, msg, err := conn.ReadMessage()
-			if err != nil {
-				hub.Unregister <- client
-				return
-			}
-			hub.broadcast <- msg
-		}
-	}()
-
-	go func() {
-		for msg := range client.send {
-			conn.WriteMessage(websocket.TextMessage, msg)
-		}
-	}()
+	go client.WritePump()
+	go client.ReadPump()
 }

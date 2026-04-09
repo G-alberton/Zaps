@@ -4,6 +4,7 @@ import (
 	"ZAPS/internal/models"
 	"ZAPS/internal/queue"
 	"ZAPS/internal/services"
+	"ZAPS/internal/websocket"
 	"context"
 	"encoding/json"
 	"log"
@@ -47,6 +48,7 @@ func HandleWebhook(
 	mediaService *services.MediaService,
 	conversationService *services.ConversationService,
 	q queue.JobQueue,
+	hub *websocket.Hub,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -84,6 +86,7 @@ func HandleWebhook(
 					messageService,
 					mediaService,
 					conversationService,
+					hub,
 				)
 				return nil
 			})
@@ -101,6 +104,7 @@ func processEvent(
 	messageService *services.MessageService,
 	mediaService *services.MediaService,
 	conversationService *services.ConversationService,
+	hub *websocket.Hub,
 ) {
 
 	if len(event.Entry) == 0 {
@@ -132,6 +136,7 @@ func processEvent(
 					messageService,
 					mediaService,
 					conversationService,
+					hub,
 				)
 			}
 		}
@@ -146,7 +151,15 @@ func processMessage(
 	messageService *services.MessageService,
 	mediaService *services.MediaService,
 	conversationService *services.ConversationService,
+	hub *websocket.Hub,
 ) {
+
+	select {
+	case <-ctx.Done():
+		log.Println("Context cancelado no processMessage")
+		return
+	default:
+	}
 
 	name, ok := contactsMap[msg.From]
 	if !ok {
@@ -224,5 +237,20 @@ func processMessage(
 
 	if err := messageService.SaveMessage(message); err != nil {
 		log.Printf("Erro ao salvar mensagem (%s): %v", msg.ID, err)
+	}
+
+	if hub != nil {
+		msgJSON, err := json.Marshal(message)
+		if err != nil {
+			log.Println("Erro ao serializar mensagem:", err)
+			return
+		}
+
+		select {
+		case hub.Broadcast <- msgJSON:
+			log.Println(" Mensagem enviadsa para WebSocked")
+		default:
+			log.Println("Canal Broadcast cheio, descartando mensagem")
+		}
 	}
 }

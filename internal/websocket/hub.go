@@ -3,33 +3,50 @@ package websocket
 import "sync"
 
 type Hub struct {
-	clients    map[*Client]bool
-	broadcast  chan []byte
+	Clients    map[*Client]bool
+	Broadcast  chan []byte
 	mu         sync.Mutex
 	Register   chan *Client
 	Unregister chan *Client
 }
 
-func newHub() *Hub {
+func NewHub() *Hub {
 	return &Hub{
-		clients:   make(map[*Client]bool),
-		broadcast: make(chan []byte),
+		Clients:    make(map[*Client]bool),
+		Broadcast:  make(chan []byte, 256),
+		Register:   make(chan *Client),
+		Unregister: make(chan *Client),
 	}
 }
 
 func (h *Hub) Run() {
 	for {
-		msg := <-h.broadcast
+		select {
 
-		h.mu.Lock()
-		for client := range h.clients {
-			select {
-			case client.send <- msg:
-			default:
+		case client := <-h.Register:
+			h.mu.Lock()
+			h.Clients[client] = true
+			h.mu.Unlock()
+
+		case client := <-h.Unregister:
+			h.mu.Lock()
+			if _, ok := h.Clients[client]; ok {
+				delete(h.Clients, client)
 				close(client.send)
-				delete(h.clients, client)
 			}
+			h.mu.Unlock()
+
+		case msg := <-h.Broadcast:
+			h.mu.Lock()
+			for client := range h.Clients {
+				select {
+				case client.send <- msg:
+				default:
+					close(client.send)
+					delete(h.Clients, client)
+				}
+			}
+			h.mu.Unlock()
 		}
-		h.mu.Unlock()
 	}
 }

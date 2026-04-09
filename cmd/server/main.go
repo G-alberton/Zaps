@@ -5,6 +5,7 @@ import (
 	"ZAPS/internal/queue"
 	"ZAPS/internal/services"
 	"ZAPS/internal/webhook"
+	"ZAPS/internal/websocket"
 	"context"
 	"log"
 	"net/http"
@@ -42,7 +43,8 @@ func loggingMiddleware(next http.Handler) http.Handler {
 
 func main() {
 
-	//messageRepo := repository.NewMessageRepository(nil)
+	hub := websocket.NewHub()
+	go hub.Run()
 
 	q := queue.NewPriorityQueue(100)
 	q.Start(5)
@@ -54,12 +56,18 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("!Nova conexão WebSocket!")
+		websocket.ServerWS(hub, w, r)
+	})
+
 	mux.HandleFunc("/webhook", webhook.HandleWebhook(
 		contactService,
 		messageService,
 		mediaService,
 		conversationService,
 		q,
+		hub,
 	))
 
 	mux.HandleFunc("/send-message", handlers.SendMessage(
@@ -69,7 +77,6 @@ func main() {
 	))
 
 	mux.HandleFunc("/messages", handlers.GetMessages(messageService))
-
 	mux.HandleFunc("/messages/paginated", handlers.ListMessagesPaginated(messageService))
 
 	mux.HandleFunc("/conversations", handlers.GetConversations(
@@ -91,8 +98,8 @@ func main() {
 	server := &http.Server{
 		Addr:         ":8080",
 		Handler:      loggingMiddleware(enableCORS(mux)),
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  60 * time.Second,
+		WriteTimeout: 60 * time.Second,
 	}
 
 	log.Println("🚀 Servidor rodando em http://localhost:8080")
