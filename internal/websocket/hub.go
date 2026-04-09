@@ -31,18 +31,18 @@ func (h *Hub) Run() {
 		case client := <-h.Register:
 			h.mu.Lock()
 
-			if h.Rooms[client.ConversationID] == nil {
-				h.Rooms[client.ConversationID] = make(map[*Client]bool)
+			if h.Rooms[client.conversationID] == nil {
+				h.Rooms[client.conversationID] = make(map[*Client]bool)
 			}
 
-			h.Rooms[client.ConversationID][client] = true
+			h.Rooms[client.conversationID][client] = true
 
 			h.mu.Unlock()
 
 		case client := <-h.Unregister:
 			h.mu.Lock()
 
-			if clients, ok := h.Rooms[client.ConversationID]; ok {
+			if clients, ok := h.Rooms[client.conversationID]; ok {
 				if _, ok := clients[client]; ok {
 					delete(clients, client)
 					close(client.send)

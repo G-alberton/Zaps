@@ -8,7 +8,7 @@ type Client struct {
 	conn           *websocket.Conn
 	send           chan []byte
 	hub            *Hub
-	ConversationID string
+	conversationID string
 }
 
 func (c *Client) ReadPump() {
@@ -23,7 +23,10 @@ func (c *Client) ReadPump() {
 			break
 		}
 
-		c.hub.Broadcast <- msg
+		c.hub.Broadcast <- MessagePayload{
+			ConversationID: c.conversationID,
+			Data:           msg,
+		}
 
 	}
 }
