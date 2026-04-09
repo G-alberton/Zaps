@@ -14,6 +14,12 @@ var upgrader = websocket.Upgrader{
 }
 
 func ServerWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	conversationID := r.URL.Query().Get("conversation_id")
+	if conversationID == "" {
+		http.Error(w, "conversation_id required", http.StatusBadRequest)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Erro ao fazer upgrade:", err)
@@ -21,9 +27,10 @@ func ServerWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := &Client{
-		conn: conn,
-		send: make(chan []byte, 256),
-		hub:  hub,
+		conn:           conn,
+		send:           make(chan []byte, 256),
+		hub:            hub,
+		ConversationID: conversationID,
 	}
 
 	hub.Register <- client

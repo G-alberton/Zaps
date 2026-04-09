@@ -247,7 +247,10 @@ func processMessage(
 		}
 
 		select {
-		case hub.Broadcast <- msgJSON:
+		case hub.Broadcast <- websocket.MessagePayload{
+			ConversationID: conversationID,
+			Data: msgJSON,
+		}
 			log.Println(" Mensagem enviadsa para WebSocked")
 		default:
 			log.Println("Canal Broadcast cheio, descartando mensagem")

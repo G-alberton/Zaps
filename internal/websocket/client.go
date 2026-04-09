@@ -5,9 +5,10 @@ import (
 )
 
 type Client struct {
-	conn *websocket.Conn
-	send chan []byte
-	hub  *Hub
+	conn           *websocket.Conn
+	send           chan []byte
+	hub            *Hub
+	ConversationID string
 }
 
 func (c *Client) ReadPump() {
