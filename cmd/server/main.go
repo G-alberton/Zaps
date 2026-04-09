@@ -57,7 +57,14 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("!Nova conexão WebSocket!")
+		conversationID := r.URL.Query().Get("Conversation_id")
+		if conversationID == "" {
+			http.Error(w, "conversation_id required", http.StatusBadRequest)
+			return
+		}
+
+		log.Println("WS conectado | conversation_id=$s", conversationID)
+
 		websocket.ServerWS(hub, w, r)
 	})
 
@@ -98,8 +105,8 @@ func main() {
 	server := &http.Server{
 		Addr:         ":8080",
 		Handler:      loggingMiddleware(enableCORS(mux)),
-		ReadTimeout:  60 * time.Second,
-		WriteTimeout: 60 * time.Second,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
 	}
 
 	log.Println("🚀 Servidor rodando em http://localhost:8080")
