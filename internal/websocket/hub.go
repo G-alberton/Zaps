@@ -4,7 +4,7 @@ import "sync"
 
 type Hub struct {
 	Rooms      map[string]map[*Client]bool
-	Broadcast  chan []byte
+	Broadcast  chan MessagePayload
 	mu         sync.Mutex
 	Register   chan *Client
 	Unregister chan *Client
@@ -18,7 +18,7 @@ type MessagePayload struct {
 func NewHub() *Hub {
 	return &Hub{
 		Rooms:      make(map[string]map[*Client]bool),
-		Broadcast:  make(chan []byte, 256),
+		Broadcast:  make(chan MessagePayload, 256),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
 	}
@@ -27,22 +27,23 @@ func NewHub() *Hub {
 func (h *Hub) Run() {
 	for {
 		select {
+
 		case client := <-h.Register:
 			h.mu.Lock()
 
-			if h.Rooms[client.conversationID] == nil {
-				h.Rooms[client.conversationID] = make(map[*Client]bool)
+			if h.Rooms[client.ConversationID] == nil {
+				h.Rooms[client.ConversationID] = make(map[*Client]bool)
 			}
 
-			h.Rooms[client.conversationID][client] = true
+			h.Rooms[client.ConversationID][client] = true
 
 			h.mu.Unlock()
 
 		case client := <-h.Unregister:
 			h.mu.Lock()
 
-			if clients, ok := h.Rooms[client.conversationID]; ok {
-				if, _, ok := clients[client]; ok {
+			if clients, ok := h.Rooms[client.ConversationID]; ok {
+				if _, ok := clients[client]; ok {
 					delete(clients, client)
 					close(client.send)
 				}
@@ -59,7 +60,7 @@ func (h *Hub) Run() {
 					case client.send <- msg.Data:
 					default:
 						close(client.send)
-						delete(clients, clieclient)
+						delete(clients, client)
 					}
 				}
 			}
@@ -68,4 +69,3 @@ func (h *Hub) Run() {
 		}
 	}
 }
-
