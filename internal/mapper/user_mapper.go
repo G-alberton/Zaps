@@ -22,3 +22,12 @@ func ToResponse(u *models.User) dto.UserResponse {
 		Email: u.Email,
 	}
 }
+
+func ToDB(u *models.User) *database.UserDB {
+	return &database.UserDB{
+		ID:       u.ID,
+		Name:     u.Name,
+		Email:    u.Email,
+		Password: u.Password,
+	}
+}
