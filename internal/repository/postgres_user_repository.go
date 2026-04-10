@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ZAPS/internal/database"
 	"ZAPS/internal/mapper"
 	"ZAPS/internal/models"
 	"database/sql"
@@ -33,4 +34,52 @@ func (r *PostgresUserRepository) Create(user *models.User) error {
 	user.ID = dbUser.ID
 
 	return nil
+}
+
+func (r *PostgresUserRepository) FindByEmail(email string) (*models.User, error) {
+	dbUser := &database.UserDB{}
+
+	query := `
+		SELECT id, name, email, password, created_at
+        FROM users
+        WHERE email = $1
+	`
+
+	err := r.DB.QueryRow(query, email).Scan(
+		&dbUser.ID,
+		&dbUser.Name,
+		&dbUser.Email,
+		&dbUser.Password,
+		&dbUser.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return mapper.ToDomain(dbUser), nil
+}
+
+func (r *PostgresUserRepository) FindByID(id int64) (*models.User, error) {
+	dbUser := &database.UserDB{}
+
+	query := `
+        SELECT id, name, email, password, created_at
+        FROM users
+        WHERE id = $1
+    `
+
+	err := r.DB.QueryRow(query, id).Scan(
+		&dbUser.ID,
+		&dbUser.Name,
+		&dbUser.Email,
+		&dbUser.Password,
+		&dbUser.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return mapper.ToDomain(dbUser), nil
 }
