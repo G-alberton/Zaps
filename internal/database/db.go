@@ -11,7 +11,7 @@ import (
 func Connect() *sql.DB {
 	connStr := "Acesso ao Banco de Dados"
 
-	db, err := sql.Open("Postgres", connStr)
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal("Erro ao Conectar:", err)
 	}

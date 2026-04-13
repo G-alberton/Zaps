@@ -1,8 +1,11 @@
 package main
 
 import (
+	"ZAPS/internal/auth"
+	"ZAPS/internal/database"
 	"ZAPS/internal/handlers"
 	"ZAPS/internal/queue"
+	"ZAPS/internal/repository"
 	"ZAPS/internal/services"
 	"ZAPS/internal/webhook"
 	"ZAPS/internal/websocket"
@@ -12,6 +15,8 @@ import (
 	"os"
 	"os/signal"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 func enableCORS(next http.Handler) http.Handler {
@@ -42,6 +47,24 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
+
+	db := database.Connect()
+
+	userRepo := &repository.PostgresUserRepository{
+		DB: db,
+	}
+
+	jwtService := &auth.JWTService{
+		Secret: []byte("super-secret"),
+		Expire: time.Hour * 24,
+	}
+
+	authService := &services.AuthService{
+		Repo: userRepo,
+		JWT:  jwtService,
+	}
+
+	_ = authService
 
 	hub := websocket.NewHub()
 	go hub.Run()

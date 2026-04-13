@@ -1,7 +1,11 @@
 package services
 
-import "ZAPS/internal/repository"
+import (
+	"ZAPS/internal/auth"
+	"ZAPS/internal/repository"
+)
 
 type AuthService struct {
 	Repo repository.UserRespository
+	JWT  *auth.JWTService
 }
