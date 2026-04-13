@@ -8,7 +8,7 @@ import (
 )
 
 type PostgresUserRepository struct {
-	Db *sql.DB
+	DB *sql.DB
 }
 
 func (r *PostgresUserRepository) Create(user *models.User) error {
