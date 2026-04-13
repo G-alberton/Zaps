@@ -4,6 +4,7 @@ import (
 	"ZAPS/internal/auth"
 	"ZAPS/internal/database"
 	"ZAPS/internal/handlers"
+	"ZAPS/internal/middleware"
 	"ZAPS/internal/queue"
 	"ZAPS/internal/repository"
 	"ZAPS/internal/services"
@@ -59,9 +60,15 @@ func main() {
 		Expire: time.Hour * 24,
 	}
 
+	authMiddleware := middleware.AuthMiddleware(jwtService)
+
 	authService := &services.AuthService{
 		Repo: userRepo,
 		JWT:  jwtService,
+	}
+
+	authHandler := &handlers.AuthHandler{
+		Service: authService,
 	}
 
 	_ = authService
@@ -79,6 +86,12 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	//não pode proteger
+	mux.HandleFunc("/register", authHandler.Register)
+	//não pode proteger
+	mux.HandleFunc("/login", authHandler.Login)
+
+	//não pode proteger
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conversationID := r.URL.Query().Get("Conversation_id")
 		if conversationID == "" {
@@ -91,6 +104,7 @@ func main() {
 		websocket.ServerWS(hub, w, r)
 	})
 
+	//não pode proteger
 	mux.HandleFunc("/webhook", webhook.HandleWebhook(
 		contactService,
 		messageService,
@@ -100,30 +114,46 @@ func main() {
 		hub,
 	))
 
-	mux.HandleFunc("/send-message", handlers.SendMessage(
-		mediaService,
-		messageService,
-		conversationService,
-	))
+	mux.Handle(
+		"/messages",
+		authMiddleware(http.HandlerFunc(handlers.GetMessages(messageService))),
+	)
 
-	mux.HandleFunc("/messages", handlers.GetMessages(messageService))
-	mux.HandleFunc("/messages/paginated", handlers.ListMessagesPaginated(messageService))
+	mux.Handle("/send-message",
+		authMiddleware(http.HandlerFunc(handlers.SendMessage(
+			mediaService,
+			messageService,
+			conversationService,
+		))),
+	)
 
-	mux.HandleFunc("/conversations", handlers.GetConversations(
-		conversationService,
-		messageService,
-		contactService,
-	))
+	mux.Handle("/messages/paginated",
+		authMiddleware(http.HandlerFunc(handlers.ListMessagesPaginated(messageService))),
+	)
 
-	mux.HandleFunc("/mark-as-read", handlers.MarkAsRead(messageService))
+	mux.Handle("/conversations",
+		authMiddleware(http.HandlerFunc(handlers.GetConversations(
+			conversationService,
+			messageService,
+			contactService,
+		))),
+	)
 
-	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+	mux.Handle("/mark-as-read",
+		authMiddleware(http.HandlerFunc(handlers.MarkAsRead(messageService))),
+	)
 
-	mux.HandleFunc("/send-media", handlers.SendMedia(
-		mediaService,
-		messageService,
-		conversationService,
-	))
+	mux.Handle("/uploads/",
+		authMiddleware(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads")))),
+	)
+
+	mux.Handle("/send-media",
+		authMiddleware(http.HandlerFunc(handlers.SendMedia(
+			mediaService,
+			messageService,
+			conversationService,
+		))),
+	)
 
 	server := &http.Server{
 		Addr:         ":8080",
