@@ -37,6 +37,6 @@ func ServerWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 	hub.Register <- client
 
-	go client.WritePump()
 	go client.ReadPump()
+	go client.WritePump()
 }

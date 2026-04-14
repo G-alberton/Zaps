@@ -137,6 +137,7 @@ func main() {
 			mediaService,
 			messageService,
 			conversationService,
+			hub,
 		))),
 	)
 
