@@ -93,15 +93,31 @@ func main() {
 
 	//não pode proteger
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+
+		tokenStr := r.URL.Query().Get("token")
+		if tokenStr == "" {
+			http.Error(w, "missing token", http.StatusUnauthorized)
+			return
+		}
+
+		claims, err := jwtService.ValidateToken(tokenStr)
+		if err != nil {
+			http.Error(w, "conversation_id required", http.StatusBadRequest)
+			return
+		}
+
 		conversationID := r.URL.Query().Get("Conversation_id")
 		if conversationID == "" {
 			http.Error(w, "conversation_id required", http.StatusBadRequest)
 			return
 		}
 
-		log.Println("WS conectado | conversation_id=$s", conversationID)
+		ctx := context.WithValue(r.Context(), "user_id", claims.UserID)
+		ctx = context.WithValue(ctx, "conversation_id", conversationID)
 
-		websocket.ServerWS(hub, w, r)
+		log.Println("WS conectado | user_id:", claims.UserID, "| conversation:", conversationID)
+
+		websocket.ServerWS(hub, w, r.WithContext(ctx))
 	})
 
 	//não pode proteger

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"ZAPS/internal/dto"
 	"ZAPS/internal/services"
 	"encoding/json"
 	"net/http"
@@ -10,19 +11,8 @@ type AuthHandler struct {
 	Service *services.AuthService
 }
 
-type RegisterRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var req RegisterRequest
+	var req dto.RegisterRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -45,7 +35,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var req LoginRequest
+	var req dto.LoginRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
