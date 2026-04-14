@@ -3,6 +3,7 @@ package handlers
 import (
 	"ZAPS/internal/models"
 	"ZAPS/internal/services"
+	"ZAPS/internal/websocket"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -18,6 +19,7 @@ func SendMessage(
 	mediaService *services.MediaService,
 	messageService *services.MessageService,
 	conversationService *services.ConversationService,
+	hub *websocket.Hub,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +64,19 @@ func SendMessage(
 		}
 
 		err = messageService.SaveMessage(message)
+		if hub != nil {
+			msgJSON, err := json.Marshal(message)
+			if err == nil {
+				select {
+				case hub.Broadcast <- websocket.MessagePayload{
+					ConversationID: message.ConversationID,
+					Data:           msgJSON,
+				}:
+				default:
+					log.Println("Broadcast cheio, descartando mensagem")
+				}
+			}
+		}
 		if err != nil {
 			log.Println("erro ao salvar mensagem enviada:", err)
 		}
