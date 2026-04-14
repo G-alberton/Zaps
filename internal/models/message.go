@@ -9,7 +9,7 @@ type Message struct {
 	Type           string
 	Body           string
 	MediaID        string
-	MediaURL	   string
+	MediaURL       string
 	Timestamp      time.Time
 	Direction      string
 	Read           bool
