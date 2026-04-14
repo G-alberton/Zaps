@@ -60,7 +60,9 @@ func (h *Hub) Run() {
 					case client.send <- msg.Data:
 					default:
 						close(client.send)
-						delete(clients, client)
+						if len(clients) == 0 {
+							delete(h.Rooms, client.conversationID)
+						}
 					}
 				}
 			}

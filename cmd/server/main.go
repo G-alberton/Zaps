@@ -86,12 +86,10 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	//não pode proteger
 	mux.HandleFunc("/register", authHandler.Register)
-	//não pode proteger
+
 	mux.HandleFunc("/login", authHandler.Login)
 
-	//não pode proteger
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 
 		tokenStr := r.URL.Query().Get("token")
@@ -120,7 +118,6 @@ func main() {
 		websocket.ServerWS(hub, w, r.WithContext(ctx))
 	})
 
-	//não pode proteger
 	mux.HandleFunc("/webhook", webhook.HandleWebhook(
 		contactService,
 		messageService,
