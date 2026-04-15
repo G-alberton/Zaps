@@ -25,23 +25,3 @@ func Connect() *sql.DB {
 
 	return db
 }
-
-/*
-	tabela para o contact:
-	create table contacts (
-		phone TEXT Primary Key,
-		name TEXT
-	);
-*/
-
-/*
-	CREATE TABLE messages (
-	id SERIAL PRIMARY KEY,
-	from_phone TEXT,
-	type TEXT,
-	body TEXT,
-	media_id TEXT,
-	created_at TIMESTAMP DEFAULT NOW()
-);
-
-*/
