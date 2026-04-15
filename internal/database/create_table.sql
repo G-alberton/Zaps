@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     contact_phone VARCHAR(20) NOT NULL,
     status VARCHAR(20) DEFAULT 'active' NOT NULL,
+    last_message_at timestamp with time zone;
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     CONSTRAINT fk_conversations_contact
         FOREIGN KEY (contact_phone)
@@ -76,3 +77,34 @@ CREATE TABLE IF NOT EXISTS webhook_events (
 
 CREATE INDEX IF NOT EXISTS idx_webhook_events_processed ON webhook_events (processed);
 CREATE INDEX IF NOT EXISTS idx_webhook_events_created_at ON webhook_events (created_at);
+
+create table message_status_history (
+    id BIGSERIAL PRIMARY key,
+    message_id UUID,
+    status VARCHAR(20),
+    created_at TIMESTAMP with time zone DEFAULT now()
+)
+
+create table sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id BIGINT,
+    token Text,
+    expires_at timestamp
+)
+
+create table conversation_tags (
+    id SERIAL PRIMARY key,
+    name VARCHAR(50)
+);
+
+create table conversation_tag_rel (
+    conversation_id UUID,
+    tag_id int
+)
+
+create table internal_notes (
+    id SERIAL PRIMARY key,
+    conversation_id UUID,
+    content TEXT,
+    created_at timestamp
+)
