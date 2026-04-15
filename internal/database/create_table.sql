@@ -1,78 +1,78 @@
-Create EXTENSION if not exists "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-create table if not exists users (
+CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    email varchar(255) unique not null,
-    password varchar(255) not null,
-    created_at timestamp with time zone default now() not null
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
 );
 
-create index if not exists idx_users_email on users (email);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 
-create table if not exists contacts (
-    phone varchar(20) PRIMARY key,
-    name varchar(255) not null,
-    last_interaction timestamp with time zone
+CREATE TABLE IF NOT EXISTS contacts (
+    phone VARCHAR(20) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    last_interaction TIMESTAMP WITH TIME ZONE
 );
 
-create table if not exists conversation (
-    id uuid primary key Default uuid_generate_v4(),
-    contact_phone varchar(20) not null,
-    status varchar(20) default 'active' not null,
-    created_at timestamp with time zone default now() not null,
-    Constraint fk_conversations_contact
-        foreign key (contact_phone)
-        references contacts (phone)
-        on delete cascade
+CREATE TABLE IF NOT EXISTS conversations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    contact_phone VARCHAR(20) NOT NULL,
+    status VARCHAR(20) DEFAULT 'active' NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    CONSTRAINT fk_conversations_contact
+        FOREIGN KEY (contact_phone)
+        REFERENCES contacts (phone)
+        ON DELETE CASCADE
 );
 
-create index if not exists idx_conversation_contact_phone on conversation (contact_phone);
+CREATE INDEX IF NOT EXISTS idx_conversations_contact_phone ON conversations (contact_phone);
 
-create table if not exists messages (
-    id varchar(255) primary key,
-    conversation_id UUID not null,
-    from_phone varchar(20) not null,
-    type varchar(20) not null,
-    body text,
-    media_id varchar(255),
-    media_url text,
-    timestamp Timestamp with time zone not null,
-    direction varchar(10) not null,
-    read Boolean default false not null,
-    status varchar(20) default 'sent' not null,
-    Constraint fk_messages_conversation
-        foreign key (conversation_id)
-        references conversation (id)
-        on delete cascade
+CREATE TABLE IF NOT EXISTS messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    conversation_id UUID NOT NULL,
+    from_phone VARCHAR(20) NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    body TEXT,
+    media_id VARCHAR(255),
+    media_url TEXT,
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    direction VARCHAR(10) NOT NULL,
+    read BOOLEAN DEFAULT false NOT NULL,
+    status VARCHAR(20) DEFAULT 'sent' NOT NULL,
+    CONSTRAINT fk_messages_conversation
+        FOREIGN KEY (conversation_id)
+        REFERENCES conversations (id)
+        ON DELETE CASCADE
 );
 
-create index if not exists idx_messages_conversation_id on messages (conversation_id);
-create index if not exists idx_messages_timestamp on messages (timestamp);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages (conversation_id);
+CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages (timestamp);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_timestamp 
+ON messages (conversation_id, timestamp);
 
-create table if not Exists media_file (
-    id UUID PRIMARY key default uuid_generate_v4(),
-    whatsapp_media_id varchar(255) unique not null,
-    file_path text not null,
-    mime_type varchar(100) not null,
+CREATE TABLE IF NOT EXISTS media_file (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    whatsapp_media_id VARCHAR(255) UNIQUE NOT NULL,
+    file_path TEXT NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
     file_size BIGINT,
-
-    duration_seconds int,
-    is_voice_note Boolean default false,
-
-    created_at timestamp with time zone default now() not null
+    duration_seconds INT,
+    is_voice_note BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
 );
 
-created index if not exists idx_media_files_whatsapp_media_id on media_files (whatsapp_media_id);
-created index if not exists idx_media_files_mime_type on media_file (mime_type)
+CREATE INDEX IF NOT EXISTS idx_media_file_whatsapp_media_id ON media_file (whatsapp_media_id);
+CREATE INDEX IF NOT EXISTS idx_media_file_mime_type ON media_file (mime_type);
 
-create table if not exists webhook_events(
-    id BIGSERIAL primary key,
-    payload JSONB not null
-    processed Boolean default false not null,
-    error_log text,
-    created_at timestamp with time zone default now() not null
+CREATE TABLE IF NOT EXISTS webhook_events (
+    id BIGSERIAL PRIMARY KEY,
+    payload JSONB NOT NULL,
+    processed BOOLEAN DEFAULT false NOT NULL,
+    error_log TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
 );
 
-create index if not exists idx_webhook_events_processed on webhook_events (processed)
-create index if not exists idx_webhook_events_created_at on webhook_events (created_at)
+CREATE INDEX IF NOT EXISTS idx_webhook_events_processed ON webhook_events (processed);
+CREATE INDEX IF NOT EXISTS idx_webhook_events_created_at ON webhook_events (created_at);
