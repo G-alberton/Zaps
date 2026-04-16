@@ -4,148 +4,96 @@ import (
 	"ZAPS/internal/models"
 	"ZAPS/internal/pagination"
 	"ZAPS/internal/repository"
+	"ZAPS/internal/websocket"
+	"encoding/json"
 	"fmt"
 	"log"
-	"sort"
-	"sync"
 	"time"
 )
 
 type MessageService struct {
-	repo     *repository.MessageRepository
-	messages []models.Message
-	mu       sync.Mutex
+	repo             *repository.MessageRepository
+	conversationRepo *repository.ConversationRepository
+	hub              *websocket.Hub
 }
 
-func NewMessageService(repo *repository.MessageRepository) *MessageService {
+func NewMessageService(
+	repo *repository.MessageRepository,
+	conversationRepo *repository.ConversationRepository,
+	hub *websocket.Hub,
+) *MessageService {
 	return &MessageService{
-		repo:     repo,
-		messages: []models.Message{},
+		repo:             repo,
+		conversationRepo: conversationRepo,
+		hub:              hub,
 	}
 }
 
 func (s *MessageService) SaveMessage(msg models.Message) error {
 	if msg.From == "" {
-		return nil
+		return fmt.Errorf("from vazio")
 	}
 
 	switch msg.Type {
 	case "text":
 		if msg.Body == "" {
-			return fmt.Errorf("Mensagem de Texto Vazio")
+			return fmt.Errorf("mensagem vazia")
 		}
 	case "image", "audio", "document":
 		if msg.MediaID == "" {
-			log.Println("Mídia sem ID")
-			return nil
+			return fmt.Errorf("media sem ID")
 		}
 	default:
-		log.Println("Tipo não suportado:", msg.Type)
-		return nil
+		return fmt.Errorf("tipo não suportado")
 	}
 
 	if msg.Timestamp.IsZero() {
 		msg.Timestamp = time.Now()
 	}
 
-	s.mu.Lock()
-	s.messages = append(s.messages, msg)
-	s.mu.Unlock()
+	if msg.Status == "" {
+		msg.Status = "sent"
+	}
 
-	if s.repo != nil {
-		err := s.repo.Save(msg)
-		if err != nil {
-			log.Println("Erro ao salvar mensagem:", err)
+	if msg.Direction == "" {
+		msg.Direction = "outbound"
+	}
+
+	if err := s.repo.Save(msg); err != nil {
+		return err
+	}
+
+	if s.conversationRepo != nil {
+		_ = s.conversationRepo.UpdateLastMessage(msg.ConversationID)
+	}
+
+	if s.hub != nil {
+		data, _ := json.Marshal(msg)
+
+		s.hub.Broadcast <- websocket.MessagePayload{
+			ConversationID: msg.ConversationID,
+			Data:           data,
 		}
 	}
 
-	log.Printf("Mensagem salva | From: %s | Type: %s | Direction: %s", msg.From, msg.Type, msg.Direction)
+	log.Printf("Mensagem salva | %s | %s", msg.From, msg.Type)
+
 	return nil
 }
 
-func (s *MessageService) GetByConversation(conversationID string) []models.Message {
-	s.mu.Lock()
-	messagesCopy := make([]models.Message, len(s.messages))
-	copy(messagesCopy, s.messages)
-	s.mu.Unlock()
-
-	var result []models.Message
-
-	for _, msg := range messagesCopy {
-		if msg.ConversationID == conversationID {
-			result = append(result, msg)
-		}
-	}
-
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Timestamp.Before(result[j].Timestamp)
-	})
-
-	return result
+func (s *MessageService) GetByConversation(conversationID string) ([]models.Message, error) {
+	return s.repo.ListByConversation(conversationID)
 }
 
-func (s *MessageService) GetLastMessage(conversationID string) *models.Message {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	var last *models.Message
-
-	for i := range s.messages {
-		msg := &s.messages[i]
-
-		if msg.ConversationID == conversationID {
-			if last == nil || msg.Timestamp.After(last.Timestamp) {
-				last = msg
-			}
-		}
-	}
-
-	return last
-}
-
-func (s *MessageService) GetAll() []models.Message {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	copySlice := make([]models.Message, len(s.messages))
-	copy(copySlice, s.messages)
-
-	return copySlice
-}
-
-func (s *MessageService) CountUnread(conversationID string) int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	count := 0
-
-	for _, msg := range s.messages {
-		if msg.ConversationID == conversationID && msg.Direction == "inbound" {
-			count++
-		}
-	}
-
-	return count
-}
-
-func (s *MessageService) MarkAsRead(conversationID string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for i := range s.messages {
-		if s.messages[i].ConversationID == conversationID {
-			s.messages[i].Direction = "read"
-		}
-	}
-}
-
-func (s *MessageService) ListMessagesPaginated(p pagination.Pagination) (pagination.Response[models.Message], error) {
+func (s *MessageService) ListMessagesPaginated(
+	p pagination.Pagination,
+) (pagination.Response[models.Message], error) {
 
 	p.Normalize()
 
 	messages, err := s.repo.ListPaginated(p.Cursor, p.Limit+1)
 	if err != nil {
-		return pagination.Response[models.Message]{}, fmt.Errorf("repository not initialized")
+		return pagination.Response[models.Message]{}, err
 	}
 
 	hasMore := false

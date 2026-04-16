@@ -16,18 +16,35 @@ func NewMessageRepository(db *sql.DB) *MessageRepository {
 
 func (r *MessageRepository) Save(msg models.Message) error {
 	query := `
-		INSERT INTO messages (from_phone, type, body, media_id, created_at, conversation_id)
-		VALUES ($1, $2, $3, $4, $5, $6);
+		INSERT INTO messages (
+		id,
+		conversation_id,
+		from_phone, 
+		type, 
+		body, 
+		media_id,
+		media_url,
+		sent_at,
+		direction,
+		status,
+		read 
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
 	`
 
 	_, err := r.DB.Exec(
 		query,
+		msg.ID,
+		msg.ConversationID,
 		msg.From,
 		msg.Type,
 		msg.Body,
 		msg.MediaID,
+		msg.MediaURL,
 		msg.Timestamp,
-		msg.ConversationID,
+		msg.Direction,
+		msg.Status,
+		msg.Read,
 	)
 
 	return err
@@ -36,10 +53,10 @@ func (r *MessageRepository) Save(msg models.Message) error {
 func (r *MessageRepository) ListPaginated(cursor time.Time, limit int) ([]models.Message, error) {
 
 	rows, err := r.DB.Query(`
-		SELECT id, from_phone, type, body, media_id, created_at, conversation_id
+		SELECT id, from_phone, type, body, media_id, media_url, sent_at, direction, status, read, conversation_id
 		FROM messages
-		WHERE created_at > $1
-		ORDER BY created_at ASC
+		WHERE sent_at > $1
+		ORDER BY sent_at ASC
 		LIMIT $2
 	`, cursor, limit)
 	if err != nil {
@@ -57,7 +74,11 @@ func (r *MessageRepository) ListPaginated(cursor time.Time, limit int) ([]models
 			&m.Type,
 			&m.Body,
 			&m.MediaID,
+			&m.MediaURL,
 			&m.Timestamp,
+			&m.Direction,
+			&m.Status,
+			&m.Read,
 			&m.ConversationID,
 		); err != nil {
 			return nil, err
@@ -75,10 +96,10 @@ func (r *MessageRepository) ListPaginatedByConversation(
 ) ([]models.Message, error) {
 
 	rows, err := r.DB.Query(`
-		SELECT id, from_phone, type, body, media_id, created_at, conversation_id
+		SELECT id, from_phone, type, body, media_id, media_url, sent_at, direction, status, read, conversation_id
 		FROM messages
-		WHERE conversation_id = $1 AND id > $2
-		ORDER BY created_at ASC
+		WHERE conversation_id = $1 AND sent_at > $2
+		ORDER BY sent_at ASC
 		LIMIT $3
 	`, conversationID, cursor, limit)
 	if err != nil {
@@ -96,7 +117,11 @@ func (r *MessageRepository) ListPaginatedByConversation(
 			&m.Type,
 			&m.Body,
 			&m.MediaID,
+			&m.MediaURL,
 			&m.Timestamp,
+			&m.Direction,
+			&m.Status,
+			&m.Read,
 			&m.ConversationID,
 		); err != nil {
 			return nil, err
@@ -106,3 +131,5 @@ func (r *MessageRepository) ListPaginatedByConversation(
 
 	return messages, nil
 }
+
+func (r *MessageRepository) ListByConversation(conversationID string) ([]models.Message, error)

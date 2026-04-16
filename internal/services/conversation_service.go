@@ -18,12 +18,12 @@ func NewConversationService() *ConversationService {
 	}
 }
 
-func (s *ConversationService) GetOrCreate(contact string) string {
+func (s *ConversationService) GetOrCreate(contact string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if conv, ok := s.conversations[contact]; ok {
-		return conv.ID
+		return conv.ID, nil
 	}
 
 	id := uuid.New().String()
@@ -33,7 +33,7 @@ func (s *ConversationService) GetOrCreate(contact string) string {
 		Contact: contact,
 	}
 
-	return id
+	return id, nil
 }
 
 func (s *ConversationService) List() []models.Conversation {
