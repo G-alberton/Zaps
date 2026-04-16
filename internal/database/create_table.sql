@@ -13,14 +13,14 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE TABLE IF NOT EXISTS contacts (
     phone VARCHAR(20) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    last_interaction TIMESTAMP WITH TIME ZONE
+    last_interaction TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS conversations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     contact_phone VARCHAR(20) NOT NULL,
     status VARCHAR(20) DEFAULT 'active' NOT NULL,
-    last_message_at timestamp with time zone;
+    last_message_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     CONSTRAINT fk_conversations_contact
         FOREIGN KEY (contact_phone)
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS messages (
     body TEXT,
     media_id VARCHAR(255),
     media_url TEXT,
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    sent_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     direction VARCHAR(10) NOT NULL,
     read BOOLEAN DEFAULT false NOT NULL,
     status VARCHAR(20) DEFAULT 'sent' NOT NULL,
@@ -49,9 +49,9 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages (conversation_id);
-CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages (timestamp);
-CREATE INDEX IF NOT EXISTS idx_messages_conversation_timestamp 
-ON messages (conversation_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_messages_sent_at ON messages (sent_at);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_sent_at 
+ON messages (conversation_id, sent_at);
 
 CREATE TABLE IF NOT EXISTS media_file (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -78,33 +78,34 @@ CREATE TABLE IF NOT EXISTS webhook_events (
 CREATE INDEX IF NOT EXISTS idx_webhook_events_processed ON webhook_events (processed);
 CREATE INDEX IF NOT EXISTS idx_webhook_events_created_at ON webhook_events (created_at);
 
-create table message_status_history (
-    id BIGSERIAL PRIMARY key,
-    message_id UUID,
-    status VARCHAR(20),
-    created_at TIMESTAMP with time zone DEFAULT now()
-)
+CREATE TABLE message_status_history (
+    id BIGSERIAL PRIMARY KEY,
+    message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
 
-create table sessions (
+CREATE TABLE sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id BIGINT,
-    token Text,
-    expires_at timestamp
-)
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    token TEXT UNIQUE,
+    expires_at TIMESTAMP WITH TIME ZONE
+);
 
-create table conversation_tags (
-    id SERIAL PRIMARY key,
+CREATE TABLE conversation_tags (
+    id SERIAL PRIMARY KEY,
     name VARCHAR(50)
 );
 
-create table conversation_tag_rel (
-    conversation_id UUID,
-    tag_id int
-)
+CREATE TABLE conversation_tag_rel (
+    conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+    tag_id INT REFERENCES conversation_tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (conversation_id, tag_id)
+);
 
-create table internal_notes (
-    id SERIAL PRIMARY key,
-    conversation_id UUID,
+CREATE TABLE internal_notes (
+    id SERIAL PRIMARY KEY,
+    conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
     content TEXT,
-    created_at timestamp
-)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
