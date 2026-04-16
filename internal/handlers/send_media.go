@@ -74,13 +74,6 @@ func SendMedia(
 			return
 		}
 
-		if !strings.HasPrefix(realType, "image/") &&
-			!strings.HasPrefix(realType, "audio/") &&
-			!strings.HasPrefix(realType, "application/") {
-			http.Error(w, "tipo de arquivo não permitido", 400)
-			return
-		}
-
 		to := strings.TrimSpace(r.FormValue("to"))
 		caption := r.FormValue("caption")
 
@@ -129,6 +122,11 @@ func SendMedia(
 		if strings.HasPrefix(realType, "image/") {
 
 			err = mediaService.SendImageByURL(ctx, to, publicURL, caption)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+
 			mediaID = publicURL
 
 		} else if strings.HasPrefix(realType, "audio/") {
@@ -140,7 +138,13 @@ func SendMedia(
 			}
 
 			err = mediaService.SendAudioByID(ctx, to, mediaIDUpload)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+
 			mediaID = mediaIDUpload
+
 		} else if strings.HasPrefix(realType, "application/") {
 
 			mediaIDUpload, errUpload := mediaService.UploadMedia(ctx, fullPath)
@@ -156,38 +160,47 @@ func SendMedia(
 				caption,
 				header.Filename,
 			)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
 
 			mediaID = mediaIDUpload
 		}
+
+		// ✅ CORREÇÃO: pegar conversationID
+		conversationID, err := conversationService.GetOrCreate(to)
+		if err != nil {
+			http.Error(w, "erro ao obter conversa", 500)
+			return
+		}
+
+		var msgType string
+
+		if strings.HasPrefix(realType, "image/") {
+			msgType = "image"
+		} else if strings.HasPrefix(realType, "audio/") {
+			msgType = "audio"
+		} else {
+			msgType = "document"
+		}
+
+		err = messageService.SaveMessage(models.Message{
+			ConversationID: conversationID,
+			From:           "system",
+			Type:           msgType,
+			Body:           caption,
+			MediaID:        mediaID,
+			MediaURL:       publicURL,
+			Direction:      "outbound",
+			Status:         "sent",
+			Timestamp:      time.Now(),
+		})
 
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
-
-		msgType := "file"
-		if strings.HasPrefix(realType, "image/") {
-			msgType = "image"
-		} else if strings.HasPrefix(realType, "audio/") {
-			msgType = "audio"
-		} else if strings.HasPrefix(realType, "application/") {
-			msgType = "document"
-		}
-
-		conversationID := conversationService.GetOrCreate(to)
-
-		msg := models.Message{
-			From:           to,
-			ConversationID: conversationID,
-			Type:           msgType,
-			Body:           "",
-			MediaID:        mediaID,
-			MediaURL:       publicURL,
-			Direction:      "outbound",
-			Timestamp:      time.Now(),
-		}
-
-		messageService.SaveMessage(msg)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
