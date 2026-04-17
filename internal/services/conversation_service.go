@@ -28,6 +28,6 @@ func (s *ConversationService) GetOrCreate(contact string) (string, error) {
 	return s.repo.Create(contact)
 }
 
-func (s *ConversationService) List() []models.Conversation {
-	return s.repo.ListAll
+func (s *ConversationService) List() ([]models.Conversation, error) {
+	return s.repo.ListAll()
 }
