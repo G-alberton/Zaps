@@ -149,3 +149,11 @@ func (s *MessageService) ListMessagesByConversationPaginated(
 		HasMore:    hasMore,
 	}, nil
 }
+
+func (s *MessageService) GetLastMessage(conversationID string) (*models.Message, error) {
+	return s.repo.GetLastMessage(conversationID)
+}
+
+func (s *MessageService) CountUnread(conversationID string) (int, error) {
+	return s.repo.CountUnread(conversationID)
+}
