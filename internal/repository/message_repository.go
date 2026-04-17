@@ -182,3 +182,15 @@ func (r *MessageRepository) CountUnread(conversationID string) (int, error) {
 
 	return count, err
 }
+
+func (r *MessageRepository) MarkAsRead(conversationID string) error {
+	_, err := r.DB.Exec(`
+		UPDATE messages
+		SET read = true
+		WHERE conversation_id = $1
+		AND direction = 'inbound'
+		AND read = false
+	`, conversationID)
+
+	return err
+}

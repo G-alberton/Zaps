@@ -31,7 +31,11 @@ func GetMessages(messageService *services.MessageService) http.HandlerFunc {
 			return
 		}
 
-		messages := messageService.GetByConversation(conversationID)
+		messages, err := messageService.GetByConversation(conversationID)
+		if err != nil {
+			http.Error(w, "erro ao buscar mensagem", http.StatusInternalServerError)
+			return
+		}
 
 		var response []MessageResponse
 
@@ -65,7 +69,11 @@ func MarkAsRead(messageService *services.MessageService) http.HandlerFunc {
 			return
 		}
 
-		messageService.MarkAsRead(conversationID)
+		err := messageService.MarkAsRead(conversationID)
+		if err != nil {
+			http.Error(w, "erro ao marcar como lido", http.StatusInternalServerError)
+			return
+		}
 
 		w.Write([]byte("ok"))
 	}

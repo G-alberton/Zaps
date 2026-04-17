@@ -157,3 +157,7 @@ func (s *MessageService) GetLastMessage(conversationID string) (*models.Message,
 func (s *MessageService) CountUnread(conversationID string) (int, error) {
 	return s.repo.CountUnread(conversationID)
 }
+
+func (s *MessageService) MarkAsRead(conversationID string) error {
+	return s.repo.MarkAsRead(conversationID)
+}
