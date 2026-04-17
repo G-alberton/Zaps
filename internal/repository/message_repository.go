@@ -133,3 +133,52 @@ func (r *MessageRepository) ListPaginatedByConversation(
 }
 
 func (r *MessageRepository) ListByConversation(conversationID string) ([]models.Message, error)
+
+func (r *MessageRepository) GetLastMessage(conversationID string) (*models.Message, error) {
+	row := r.DB.QueryRow(`
+		SELECT id, conversation_id, from_phone, type, body, media_id, media_url, sent_at, direction, status, read
+		FROM messages
+		WHERE conversation_id = $1
+		ORDER BY sent_at DESC
+		LIMIT 1
+	`, conversationID)
+
+	var m models.Message
+
+	err := row.Scan(
+		&m.ID,
+		&m.ConversationID,
+		&m.From,
+		&m.Type,
+		&m.Body,
+		&m.MediaID,
+		&m.MediaURL,
+		&m.Timestamp,
+		&m.Direction,
+		&m.Status,
+		&m.Read,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &m, nil
+}
+
+func (r *MessageRepository) CountUnread(conversationID string) (int, error) {
+	var count int
+
+	err := r.DB.QueryRow(`
+		SELECT COUNT(*)
+		FROM messages
+		WHERE conversation_id = $1
+		AND direction = 'inbound'
+		AND read = false
+	`, conversationID).Scan(&count)
+
+	return count, err
+}

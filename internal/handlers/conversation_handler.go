@@ -45,7 +45,17 @@ func (h *ConversationHandler) GetConversations(w http.ResponseWriter, r *http.Re
 
 	for _, conv := range conversations {
 
-		lastMsg := h.messageService.GetLastMessage(conv.ID)
+		lastMsg, err := h.messageService.GetLastMessage(conv.ID)
+		if err != nil {
+			http.Error(w, "erro ao buscar ultima mensagem", 500)
+			return
+		}
+
+		count, err := h.messageService.CountUnread(conv.ID)
+		if err != nil {
+			http.Error(w, "erro ao contar nao lidas", 500)
+			return
+		}
 
 		name := h.contactService.GetName(conv.Contact)
 		if name == "" {
@@ -56,7 +66,7 @@ func (h *ConversationHandler) GetConversations(w http.ResponseWriter, r *http.Re
 			ConversationID: conv.ID,
 			Name:           name,
 			Phone:          conv.Contact,
-			UnreadCount:    h.messageService.CountUnread(conv.ID),
+			UnreadCount:    count,
 		}
 
 		var rawTime int64
@@ -108,7 +118,7 @@ func (h *ConversationHandler) GetOrCreate(w http.ResponseWriter, r *http.Request
 
 	id, err := h.service.GetOrCreate(contact)
 	if err != nil {
-		http.Error(w.err.Error(), 500)
+		http.Error(w, err.Error(), 500)
 		return
 	}
 
