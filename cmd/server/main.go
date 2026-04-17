@@ -86,11 +86,11 @@ func main() {
 	)
 	contactService := services.NewContactService(nil)
 
-	conversationHandler := handlers.newConversationHandler{
+	conversationHandler := handlers.NewConversationHandler(
 		conversationService,
 		messageService,
 		contactService,
-	}
+	)
 
 	mux := http.NewServeMux()
 

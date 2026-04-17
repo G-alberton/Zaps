@@ -166,7 +166,11 @@ func processMessage(
 		name = "Unknown"
 	}
 
-	conversationID := conversationService.GetOrCreate(msg.From)
+	conversationID, err := conversationService.GetOrCreate(msg.From)
+	if err != nil {
+		log.Printf("Erro ao obeter/criar conversa (%s): %v", msg.From, err)
+		return
+	}
 
 	log.Printf("📩 MsgID: %s | From: %s (%s) | Type: %s",
 		msg.ID, msg.From, name, msg.Type)
