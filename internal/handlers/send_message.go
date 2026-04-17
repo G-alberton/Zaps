@@ -52,7 +52,11 @@ func SendMessage(
 			return
 		}
 
-		conversationID := conversationService.GetOrCreate(req.To)
+		conversationID, err := conversationService.GetOrCreate(req.To)
+		if err != nil {
+			http.Error(w, "erro ao obter conversa", 500)
+			return
+		}
 
 		message := models.Message{
 			From:           req.To,
