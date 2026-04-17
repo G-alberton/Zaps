@@ -51,9 +51,9 @@ func main() {
 
 	db := database.Connect()
 
-	userRepo := &repository.PostgresUserRepository{
-		DB: db,
-	}
+	userRepo := &repository.PostgresUserRepository{DB: db}
+	messageRepo := repository.NewMessageRepository(db)
+	conversationRepo := repository.NewConversationRepository(db)
 
 	jwtService := &auth.JWTService{
 		Secret: []byte("super-secret"),
@@ -71,8 +71,6 @@ func main() {
 		Service: authService,
 	}
 
-	_ = authService
-
 	hub := websocket.NewHub()
 	go hub.Run()
 
@@ -81,13 +79,22 @@ func main() {
 
 	mediaService := services.NewMediaService()
 	conversationService := services.NewConversationService()
-	messageService := services.NewMessageService(nil) // sem banco por enquanto
-	contactService := services.NewContactService(nil) // sem banco por enquanto
+	messageService := services.NewMessageService(
+		messageRepo,
+		conversationRepo,
+		hub,
+	)
+	contactService := services.NewContactService(nil)
+
+	conversationHandler := &handlers.ConversationHandler{
+		service:        conversationService,
+		messageService: messageService,
+		contactService: contactService,
+	}
 
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/register", authHandler.Register)
-
 	mux.HandleFunc("/login", authHandler.Login)
 
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
@@ -100,11 +107,11 @@ func main() {
 
 		claims, err := jwtService.ValidateToken(tokenStr)
 		if err != nil {
-			http.Error(w, "conversation_id required", http.StatusBadRequest)
+			http.Error(w, "invalid token", http.StatusUnauthorized)
 			return
 		}
 
-		conversationID := r.URL.Query().Get("Conversation_id")
+		conversationID := r.URL.Query().Get("conversation_id")
 		if conversationID == "" {
 			http.Error(w, "conversation_id required", http.StatusBadRequest)
 			return
@@ -127,9 +134,16 @@ func main() {
 		hub,
 	))
 
-	mux.Handle(
-		"/messages",
+	mux.Handle("/messages",
 		authMiddleware(http.HandlerFunc(handlers.GetMessages(messageService))),
+	)
+
+	mux.Handle("/messages/paginated",
+		authMiddleware(http.HandlerFunc(handlers.ListMessagesPaginated(messageService))),
+	)
+
+	mux.Handle("/mark-as-read",
+		authMiddleware(http.HandlerFunc(handlers.MarkAsRead(messageService))),
 	)
 
 	mux.Handle("/send-message",
@@ -141,32 +155,24 @@ func main() {
 		))),
 	)
 
-	mux.Handle("/messages/paginated",
-		authMiddleware(http.HandlerFunc(handlers.ListMessagesPaginated(messageService))),
-	)
-
-	mux.Handle("/conversations",
-		authMiddleware(http.HandlerFunc(handlers.GetConversations(
-			conversationService,
-			messageService,
-			contactService,
-		))),
-	)
-
-	mux.Handle("/mark-as-read",
-		authMiddleware(http.HandlerFunc(handlers.MarkAsRead(messageService))),
-	)
-
-	mux.Handle("/uploads/",
-		authMiddleware(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads")))),
-	)
-
 	mux.Handle("/send-media",
 		authMiddleware(http.HandlerFunc(handlers.SendMedia(
 			mediaService,
 			messageService,
 			conversationService,
 		))),
+	)
+
+	mux.Handle("/conversations",
+		authMiddleware(http.HandlerFunc(conversationHandler.GetConversations)),
+	)
+
+	mux.Handle("/conversation",
+		authMiddleware(http.HandlerFunc(conversationHandler.GetOrCreate)),
+	)
+
+	mux.Handle("/uploads/",
+		authMiddleware(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads")))),
 	)
 
 	server := &http.Server{

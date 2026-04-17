@@ -2,62 +2,32 @@ package services
 
 import (
 	"ZAPS/internal/models"
-	"sync"
-
-	"github.com/google/uuid"
+	"ZAPS/internal/repository"
 )
 
 type ConversationService struct {
-	conversations map[string]models.Conversation
-	mu            sync.Mutex
+	repo *repository.ConversationRepository
 }
 
-func NewConversationService() *ConversationService {
+func NewConversationService(repo *repository.ConversationRepository) *ConversationService {
 	return &ConversationService{
-		conversations: make(map[string]models.Conversation),
+		repo: repo,
 	}
 }
 
 func (s *ConversationService) GetOrCreate(contact string) (string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	conv, err := s.repo.GetByContact(contact)
+	if err != nil {
+		return "", err
+	}
 
-	if conv, ok := s.conversations[contact]; ok {
+	if conv != nil {
 		return conv.ID, nil
 	}
 
-	id := uuid.New().String()
-
-	s.conversations[contact] = models.Conversation{
-		ID:      id,
-		Contact: contact,
-	}
-
-	return id, nil
+	return s.repo.Create(contact)
 }
 
 func (s *ConversationService) List() []models.Conversation {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	conversations := []models.Conversation{}
-
-	for _, conv := range s.conversations {
-		conversations = append(conversations, conv)
-	}
-
-	return conversations
-}
-
-func (s *ConversationService) GetAll() []models.Conversation {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	var list []models.Conversation
-
-	for _, c := range s.conversations {
-		list = append(list, c)
-	}
-
-	return list
+	return s.repo.ListAll
 }
