@@ -78,7 +78,7 @@ func main() {
 	q.Start(5)
 
 	mediaService := services.NewMediaService()
-	conversationService := services.NewConversationService()
+	conversationService := services.NewConversationService(conversationRepo)
 	messageService := services.NewMessageService(
 		messageRepo,
 		conversationRepo,
@@ -86,10 +86,10 @@ func main() {
 	)
 	contactService := services.NewContactService(nil)
 
-	conversationHandler := &handlers.ConversationHandler{
-		service:        conversationService,
-		messageService: messageService,
-		contactService: contactService,
+	conversationHandler := handlers.newConversationHandler{
+		conversationService,
+		messageService,
+		contactService,
 	}
 
 	mux := http.NewServeMux()

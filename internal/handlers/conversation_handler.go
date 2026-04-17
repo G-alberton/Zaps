@@ -13,6 +13,18 @@ type ConversationHandler struct {
 	contactService *services.ContactService
 }
 
+func newConversationHandler(
+	service *services.ConversationService,
+	messageService *services.MessageService,
+	contactService *services.ContactService,
+) *ConversationHandler {
+	return &ConversationHandler{
+		service:        service,
+		messageService: messageService,
+		contactService: contactService,
+	}
+}
+
 type conversationResponse struct {
 	ConversationID string `json:"conversation_id"`
 	Name           string `json:"name"`
