@@ -13,7 +13,7 @@ type ConversationHandler struct {
 	contactService *services.ContactService
 }
 
-func newConversationHandler(
+func NewConversationHandler(
 	service *services.ConversationService,
 	messageService *services.MessageService,
 	contactService *services.ContactService,

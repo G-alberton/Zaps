@@ -237,6 +237,7 @@ func processMessage(
 		MediaID:        mediaID,
 		Timestamp:      timestamp,
 		Direction:      "inbound",
+		Status:         "received",
 	}
 
 	if err := messageService.SaveMessage(message); err != nil {
