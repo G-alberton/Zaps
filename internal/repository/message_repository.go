@@ -132,7 +132,43 @@ func (r *MessageRepository) ListPaginatedByConversation(
 	return messages, nil
 }
 
-func (r *MessageRepository) ListByConversation(conversationID string) ([]models.Message, error)
+func (r *MessageRepository) ListByConversation(conversationID string) ([]models.Message, error) {
+	rows, err := r.DB.Query(`
+		SELECT id, from_phone, type, body, media_id, media_url, sent_at, direction, status, read, conversation_id
+		FROM messages
+		WHERE conversation_id = $1
+		ORDER BY sent_at ASC
+	`, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []models.Message
+
+	for rows.Next() {
+		var m models.Message
+		if err := rows.Scan(
+			&m.ID,
+			&m.From,
+			&m.Type,
+			&m.Body,
+			&m.MediaID,
+			&m.MediaURL,
+			&m.Timestamp,
+			&m.Direction,
+			&m.Status,
+			&m.Read,
+			&m.ConversationID,
+		); err != nil {
+			return nil, err
+		}
+
+		messages = append(messages, m)
+	}
+
+	return messages, nil
+}
 
 func (r *MessageRepository) GetLastMessage(conversationID string) (*models.Message, error) {
 	row := r.DB.QueryRow(`
