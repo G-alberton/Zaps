@@ -115,19 +115,25 @@ func SendMedia(
 			return
 		}
 
-		publicURL := fmt.Sprintf("http://localhost:8080/uploads/%s/%s", folder, filename)
+		publicURL := fmt.Sprintf("https://salutatory-unsymbolical-preston.ngrok-free.dev/uploads/%s/%s", folder, filename)
 
 		var mediaID string
 
 		if strings.HasPrefix(realType, "image/") {
 
-			err = mediaService.SendImageByURL(ctx, to, publicURL, caption)
+			mediaIDUpload, errUpload := mediaService.UploadMedia(ctx, fullPath)
+			if errUpload != nil {
+				http.Error(w, errUpload.Error(), 500)
+				return
+			}
+
+			err = mediaService.SendImageByID(ctx, to, mediaIDUpload, caption)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				return
 			}
 
-			mediaID = publicURL
+			mediaID = mediaIDUpload
 
 		} else if strings.HasPrefix(realType, "audio/") {
 

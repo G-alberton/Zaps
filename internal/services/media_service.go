@@ -13,8 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
 type MediaService struct {
@@ -24,11 +22,17 @@ type MediaService struct {
 }
 
 func NewMediaService() *MediaService {
-	_ = godotenv.Load("../../.env")
+
+	token := os.Getenv("WHATSAPP_TOKEN")
+	phoneID := os.Getenv("PHONE_NUMBER_ID")
+
+	if token == "" || phoneID == "" {
+		log.Fatal("WHATSAPP_TOKEN ou PHONE_NUMBER_ID não definido")
+	}
 
 	return &MediaService{
-		Token:         os.Getenv("WHATSAPP_TOKEN"),
-		PhoneNumberID: os.Getenv("PHONE_NUMBER_ID"),
+		Token:         token,
+		PhoneNumberID: phoneID,
 		Client: &http.Client{
 			Timeout: 15 * time.Second,
 		},

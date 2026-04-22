@@ -17,6 +17,8 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/joho/godotenv"
+
 	_ "github.com/lib/pq"
 )
 
@@ -48,6 +50,11 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Println(".env não encontrado")
+	}
 
 	db := database.Connect()
 
