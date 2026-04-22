@@ -134,6 +134,8 @@ func main() {
 		hub,
 	))
 
+	mux.Handle("/", http.FileServer(http.Dir("../../web")))
+
 	mux.Handle("/messages",
 		authMiddleware(http.HandlerFunc(handlers.GetMessages(messageService))),
 	)

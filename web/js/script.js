@@ -7,6 +7,7 @@ let seconds = 0;
 let pendingFile = null;
 let mediaRecorder;
 let audioChunks = [];
+let audioStream = null;
 
 async function loadConversations(params) {
     try{
@@ -48,7 +49,6 @@ async function loadMessages(conversationID){
                 side === 'sent' ? 'message-sent' : 'message-received'
             );
 
-            // 🔥 LÓGICA CORRETA AQUI
             let content = "";
             let caption = "";
 
@@ -299,10 +299,13 @@ function setupEventListeners(elements) {
         }
     });
 
-    audioBtn.addEventListener('mousedown', startRec);
-    window.addEventListener('mouseup', stopRec);
-    audioBtn.addEventListener('touchstart', startRec, { passive: false });
-    audioBtn.addEventListener('touchend', stopRec);
+  audioBtn.addEventListener('click', () => {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        startRec(new Event("click"));
+    } else {
+        stopRec();
+    }
+  });
 
     searchBtn.addEventListener('click', () => searchMessages(messagesContainer));
 
@@ -636,14 +639,34 @@ function startTimer() {
 
 async function startRec(e){
     if (e.cancelable) e.preventDefault();
+
     const audioBtn = document.querySelector('.audio-button');
     audioBtn.classList.add('recording');
     audioBtn.innerHTML = "🛑";
+
     document.getElementById('chat-input').style.visibility = 'hidden';
     document.getElementById('recording-status').setAttribute('style', 'display: flex !important');
+
     startTimer();
 
-    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    try {
+        if (!audioStream) {
+            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+
+        mediaRecorder = new MediaRecorder(audioStream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = e => {
+            audioChunks.push(e.data);
+        };
+
+        mediaRecorder.start();
+    } catch (err) {
+        console.log("Erro ao acessar microfone:", err);
+    }
+
+    /*const stream = await navigator.mediaDevices.getUserMedia({audio: true});
 
     mediaRecorder = new MediaRecorder(stream);
     audioChunks = [];
@@ -652,7 +675,7 @@ async function startRec(e){
         audioChunks.push(e.data);
     };
 
-    mediaRecorder.start();
+    mediaRecorder.start();*/
 }
 
 function stopRec() {
@@ -694,7 +717,11 @@ function stopRec() {
         }
     }
 
-    // UI reset
+    if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop());
+        audioStream = null;
+    }
+
     audioBtn.classList.remove('recording');
     audioBtn.innerHTML = "🎙️";
     document.getElementById('chat-input').style.visibility = 'visible';
@@ -831,14 +858,12 @@ function handleAudioPlay(e) {
 
     if (!audio) return;
 
-    // ⏱️ Atualiza duração
     audio.onloadedmetadata = () => {
         const mins = Math.floor(audio.duration / 60).toString().padStart(2, '0');
         const secs = Math.floor(audio.duration % 60).toString().padStart(2, '0');
         durationText.innerText = `${mins}:${secs}`;
     };
 
-    // ▶️ PLAY / PAUSE
     if (audio.paused) {
         audio.play();
         playBtn.innerText = "⏸";
