@@ -21,6 +21,37 @@ type MediaService struct {
 	Client        *http.Client
 }
 
+func (s *MediaService) sendRequest(ctx context.Context, url string, payload interface{}) error {
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+s.Token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.Client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	log.Println("[WA RESPONSE]:", string(body))
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("erro (%d): %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
 func NewMediaService() *MediaService {
 
 	token := os.Getenv("WHATSAPP_TOKEN")
@@ -69,16 +100,23 @@ func (s *MediaService) GetMediaURL(ctx context.Context, mediaID string) (string,
 		return "", "", fmt.Errorf("erro API (%d): %s", resp.StatusCode, string(body))
 	}
 
-	var result mediaResponse
-	if err := json.Unmarshal(body, &result); err != nil {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(body, &raw); err != nil {
 		return "", "", err
 	}
 
-	if result.URL == "" {
-		return "", "", fmt.Errorf("url vazia na resposta da API")
+	if errData, ok := raw["error"]; ok {
+		return "", "", fmt.Errorf("erro API: %v", errData)
 	}
 
-	return result.URL, result.MimeType, nil
+	url, _ := raw["url"].(string)
+	mime, _ := raw["mime_type"].(string)
+
+	if url == "" {
+		return "", "", fmt.Errorf("url vazia")
+	}
+
+	return url, mime, nil
 }
 
 func (s *MediaService) DownloadMedia(ctx context.Context, mediaURL, filePath string) error {
@@ -110,7 +148,7 @@ func (s *MediaService) DownloadMedia(ctx context.Context, mediaURL, filePath str
 	}
 	defer file.Close()
 
-	_, err = file.Write(body)
+	_, err = io.Copy(file, resp.Body)
 	return err
 }
 
@@ -138,6 +176,7 @@ func (s *MediaService) DownloadByID(ctx context.Context, mediaID, msgType string
 	return filePath, nil
 }
 
+// estava aqui para arrumar as coisas como no chat
 func (s *MediaService) SendTextMessage(ctx context.Context, to, bodyText string) error {
 	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", s.PhoneNumberID)
 
@@ -183,7 +222,7 @@ func (s *MediaService) SendTextMessage(ctx context.Context, to, bodyText string)
 	return nil
 }
 
-func (s *MediaService) SendImageByURL(ctx context.Context, to, imageURL, caption string) error {
+func (s *MediaService) SendImageByID(ctx context.Context, to, mediaID, caption string) error {
 	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", s.PhoneNumberID)
 
 	payload := map[string]interface{}{
@@ -191,7 +230,7 @@ func (s *MediaService) SendImageByURL(ctx context.Context, to, imageURL, caption
 		"to":                to,
 		"type":              "image",
 		"image": map[string]string{
-			"link":    imageURL,
+			"id":      mediaID,
 			"caption": caption,
 		},
 	}
@@ -215,12 +254,8 @@ func (s *MediaService) SendImageByURL(ctx context.Context, to, imageURL, caption
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	log.Println("[SEND IMAGE]:", string(body))
+	body, _ := io.ReadAll(resp.Body)
+	log.Println("[SEND IMAGE ID]:", string(body))
 
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("erro envio imagem (%d): %s", resp.StatusCode, string(body))
