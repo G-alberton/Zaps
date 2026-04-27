@@ -86,12 +86,7 @@ func SendMessage(
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":          "ok",
-			"conversation_id": conversationID,
-			"to":              req.To,
-			"body":            req.Body,
-		})
+
 		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":          "ok",
 			"conversation_id": conversationID,
