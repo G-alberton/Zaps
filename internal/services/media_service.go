@@ -205,40 +205,11 @@ func (s *MediaService) SendImageByID(ctx context.Context, to, mediaID, caption s
 		},
 	}
 
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+s.Token)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := s.Client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	log.Println("[SEND IMAGE ID]:", string(body))
-
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("erro envio imagem (%d): %s", resp.StatusCode, string(body))
-	}
-
-	return nil
+	return s.sendRequest(ctx, url, payload)
 }
 
 func (s *MediaService) SendDocumentByID(ctx context.Context, to, mediaID, caption, filename string) error {
-	url := fmt.Sprintf(
-		"https://graph.facebook.com/v22.0/%s/messages",
-		s.PhoneNumberID,
-	)
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", s.PhoneNumberID)
 
 	payload := map[string]interface{}{
 		"messaging_product": "whatsapp",
@@ -251,33 +222,7 @@ func (s *MediaService) SendDocumentByID(ctx context.Context, to, mediaID, captio
 		},
 	}
 
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+s.Token)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := s.Client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	log.Println("[SEND DOCUMENT]:", string(body))
-
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("erro envio documento (%d): %s", resp.StatusCode, string(body))
-	}
-
-	return nil
+	return s.sendRequest(ctx, url, payload)
 }
 
 func (s *MediaService) UploadMedia(ctx context.Context, filePath string) (string, error) {
@@ -359,37 +304,7 @@ func (s *MediaService) SendAudioByID(ctx context.Context, to, mediaID string) er
 		},
 	}
 
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+s.Token)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := s.Client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	log.Println("[SEND AUDIO]:", string(body))
-
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("erro envio audio (%d): %s", resp.StatusCode, string(body))
-	}
-
-	return nil
+	return s.sendRequest(ctx, url, payload)
 }
 
 func sanitize(name string) string {
