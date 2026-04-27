@@ -109,14 +109,14 @@ func (s *MediaService) GetMediaURL(ctx context.Context, mediaID string) (string,
 		return "", "", fmt.Errorf("erro API: %v", errData)
 	}
 
-	url, _ := raw["url"].(string)
+	mediaURL, _ := raw["url"].(string)
 	mime, _ := raw["mime_type"].(string)
 
-	if url == "" {
+	if mediaURL == "" {
 		return "", "", fmt.Errorf("url vazia")
 	}
 
-	return url, mime, nil
+	return mediaURL, mime, nil
 }
 
 func (s *MediaService) DownloadMedia(ctx context.Context, mediaURL, filePath string) error {
@@ -178,7 +178,7 @@ func (s *MediaService) DownloadByID(ctx context.Context, mediaID, msgType string
 
 // arrumando aqui
 func (s *MediaService) SendTextMessage(ctx context.Context, to, bodyText string) error {
-	url := fmt.Sprintf("http://graph.facebook.com/v22/%s/messages", s.PhoneNumberID)
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", s.PhoneNumberID)
 
 	payload := map[string]interface{}{
 		"messaging_product": "whatsapp",
