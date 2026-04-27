@@ -176,9 +176,9 @@ func (s *MediaService) DownloadByID(ctx context.Context, mediaID, msgType string
 	return filePath, nil
 }
 
-// estava aqui para arrumar as coisas como no chat
+// arrumando aqui
 func (s *MediaService) SendTextMessage(ctx context.Context, to, bodyText string) error {
-	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", s.PhoneNumberID)
+	url := fmt.Sprintf("http://graph.facebook.com/v22/%s/messages", s.PhoneNumberID)
 
 	payload := map[string]interface{}{
 		"messaging_product": "whatsapp",
@@ -189,37 +189,7 @@ func (s *MediaService) SendTextMessage(ctx context.Context, to, bodyText string)
 		},
 	}
 
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+s.Token)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := s.Client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	log.Println("[WHATSAPP]:", string(respBody))
-
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("erro envio (%d): %s", resp.StatusCode, string(respBody))
-	}
-
-	return nil
+	return s.sendRequest(ctx, url, payload)
 }
 
 func (s *MediaService) SendImageByID(ctx context.Context, to, mediaID, caption string) error {
