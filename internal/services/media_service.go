@@ -41,7 +41,10 @@ func (s *MediaService) sendRequest(ctx context.Context, url string, payload inte
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
 
 	log.Println("[WA RESPONSE]:", string(body))
 
@@ -133,12 +136,8 @@ func (s *MediaService) DownloadMedia(ctx context.Context, mediaURL, filePath str
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
 	if resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("erro download (%d): %s", resp.StatusCode, string(body))
 	}
 
