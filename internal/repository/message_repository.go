@@ -230,3 +230,9 @@ func (r *MessageRepository) MarkAsRead(conversationID string) error {
 
 	return err
 }
+
+func (r *MessageRepository) UpdateStatus(id string, status string) error {
+	query := `UPDATE messages SET status = $1 WHERE id = $2`
+	_, err := r.DB.Exec(query, status, id)
+	return err
+}

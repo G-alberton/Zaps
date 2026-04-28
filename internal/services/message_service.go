@@ -161,3 +161,7 @@ func (s *MessageService) CountUnread(conversationID string) (int, error) {
 func (s *MessageService) MarkAsRead(conversationID string) error {
 	return s.repo.MarkAsRead(conversationID)
 }
+
+func (s *MessageService) UpdateStatus(messageID string, status string) error {
+	return s.repo.UpdateStatus(messageID, status)
+}

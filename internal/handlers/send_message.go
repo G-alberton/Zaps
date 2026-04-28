@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
 	"time"
 )
 
@@ -24,7 +25,11 @@ func SendMessage(
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		defer r.Body.Close()
+
 		ctx := r.Context()
+
+		var phoneRegex = regexp.MustCompile(`^\d{10,15}$`)
 
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -33,24 +38,17 @@ func SendMessage(
 
 		var req SendMessageRequest
 
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "invalid json", http.StatusBadRequest)
 			return
 		}
 
-		if req.To == "" || req.Body == "" {
-			http.Error(w, "to and body requerid", http.StatusBadRequest)
+		if !phoneRegex.MatchString(req.To) {
+			http.Error(w, "numero invalido (use formato internacional: 5511999999999)", http.StatusBadRequest)
 			return
 		}
 
 		log.Println("[SEND] Para:", req.To, "| Msg:", req.Body)
-
-		err = mediaService.SendTextMessage(ctx, req.To, req.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 
 		conversationID, err := conversationService.GetOrCreate(req.To)
 		if err != nil {
@@ -59,15 +57,32 @@ func SendMessage(
 		}
 
 		message := models.Message{
-			From:           req.To,
+			From:           "system",
 			ConversationID: conversationID,
 			Type:           "text",
 			Body:           req.Body,
 			Direction:      "outbound",
+			Status:         "pending",
 			Timestamp:      time.Now(),
 		}
 
-		err = messageService.SaveMessage(message)
+		if err := messageService.SaveMessage(message); err != nil {
+			log.Println("erro ao salvar mensagem:", err)
+		}
+
+		err = mediaService.SendTextMessage(ctx, req.To, req.Body)
+
+		if err != nil {
+			message.Status = "failed"
+			log.Println("erro ao enviar mensagem:", err)
+		} else {
+			message.Status = "sent"
+		}
+
+		if err := messageService.UpdateStatus(message.ID, message.Status); err != nil {
+			log.Println("erro ao atualizar status:", err)
+		}
+
 		if hub != nil {
 			msgJSON, err := json.Marshal(message)
 			if err == nil {
@@ -81,20 +96,14 @@ func SendMessage(
 				}
 			}
 		}
-		if err != nil {
-			log.Println("erro ao salvar mensagem enviada:", err)
-		}
 
 		w.Header().Set("Content-Type", "application/json")
-
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":          "ok",
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":          message.Status,
 			"conversation_id": conversationID,
 			"to":              req.To,
 			"body":            req.Body,
-		}); err != nil {
-			log.Println("erro ao retornar resposta:", err)
-		}
+		})
 	}
 
 }
