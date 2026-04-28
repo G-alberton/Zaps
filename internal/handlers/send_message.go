@@ -24,9 +24,7 @@ func SendMessage(
 	conversationService *services.ConversationService,
 	hub *websocket.Hub,
 ) http.HandlerFunc {
-
 	var phoneRegex = regexp.MustCompile(`^\d{10,15}$`)
-
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		defer r.Body.Close()
@@ -44,7 +42,7 @@ func SendMessage(
 		}
 
 		if !phoneRegex.MatchString(req.To) {
-			http.Error(w, "numero invalido (use formato internacional: 5511999999999)", http.StatusBadRequest)
+			http.Error(w, "numero invalido (ex: 5511999999999)", http.StatusBadRequest)
 			return
 		}
 
@@ -73,36 +71,36 @@ func SendMessage(
 		}
 
 		if err := messageService.SaveMessage(message); err != nil {
-			log.Println("erro ao salvar mensagem:", err)
+			http.Error(w, "erro ao salvar mensagem", 500)
 			return
 		}
 
 		if hub != nil {
-			msgJSON, err := json.Marshal(message)
-			if err == nil {
-				select {
-				case hub.Broadcast <- websocket.MessagePayload{
-					ConversationID: message.ConversationID,
-					Data:           msgJSON,
-				}:
-				default:
-					log.Println("Broadcast cheio, descartando mensagem")
-				}
+			msgJSON, _ := json.Marshal(message)
+
+			select {
+			case hub.Broadcast <- websocket.MessagePayload{
+				ConversationID: message.ConversationID,
+				Data:           msgJSON,
+			}:
+			default:
+				log.Println("Broadcast cheio")
 			}
 		}
 
 		go func(msg models.Message) {
 
-			err = mediaService.SendTextMessage(ctx, req.To, req.Body)
+			err := mediaService.SendTextMessage(ctx, req.To, req.Body)
 
+			var newStatus string
 			if err != nil {
-				message.Status = "failed"
-				log.Println("erro ao enviar mensagem:", err)
+				log.Println("erro envio:", err)
+				newStatus = "failed"
 			} else {
-				message.Status = "sent"
+				newStatus = "sent"
 			}
 
-			if err := messageService.UpdateStatus(message.ID, message.Status); err != nil {
+			if err := messageService.UpdateStatus(msg.ID, newStatus); err != nil {
 				log.Println("erro ao atualizar status:", err)
 			}
 
@@ -129,5 +127,4 @@ func SendMessage(
 			"conversation_id": conversationID,
 		})
 	}
-
 }
