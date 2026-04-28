@@ -72,7 +72,9 @@ func HandleWebhook(
 				return
 			}
 
+			// ✅ resposta imediata (recomendado pelo Meta)
 			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("EVENT_RECEIVED"))
 
 			q.Add(queue.High, func() error {
 
@@ -116,12 +118,22 @@ func processEvent(
 
 		for _, change := range entry.Changes {
 
+			if change.Value.Statuses != nil {
+				for _, status := range change.Value.Statuses {
+
+					log.Printf("📊 Status: %s → %s", status.ID, status.Status)
+
+					if err := messageService.UpdateStatus(status.ID, status.Status); err != nil {
+						log.Println("erro ao atualizar status:", err)
+					}
+				}
+			}
+
 			if change.Value.Messages == nil {
 				continue
 			}
 
 			contactsMap := map[string]string{}
-
 			for _, c := range change.Value.Contacts {
 				contactsMap[c.WaID] = c.Profile.Name
 			}
@@ -161,14 +173,20 @@ func processMessage(
 	default:
 	}
 
-	name, ok := contactsMap[msg.From]
-	if !ok {
+	exists, err := messageService.Exists(msg.ID)
+	if err == nil && exists {
+		log.Println("Mensagem duplicada ignorada:", msg.ID)
+		return
+	}
+
+	name := contactsMap[msg.From]
+	if name == "" {
 		name = "Unknown"
 	}
 
 	conversationID, err := conversationService.GetOrCreate(msg.From)
 	if err != nil {
-		log.Printf("Erro ao obeter/criar conversa (%s): %v", msg.From, err)
+		log.Printf("Erro ao obter/criar conversa (%s): %v", msg.From, err)
 		return
 	}
 
@@ -185,7 +203,7 @@ func processMessage(
 	switch msg.Type {
 
 	case "text":
-		if msg.Text != nil && msg.Text.Body != "" {
+		if msg.Text != nil {
 			body = msg.Text.Body
 		}
 
@@ -206,12 +224,14 @@ func processMessage(
 	}
 
 	if mediaID != "" {
-		filePath, err := mediaService.DownloadByID(ctx, mediaID, msg.Type)
-		if err != nil {
-			log.Printf("Erro ao baixar mídia (%s): %v", mediaID, err)
-		} else {
+		go func() {
+			filePath, err := mediaService.DownloadByID(context.Background(), mediaID, msg.Type)
+			if err != nil {
+				log.Printf("Erro ao baixar mídia (%s): %v", mediaID, err)
+				return
+			}
 			log.Printf("Mídia salva em: %s", filePath)
-		}
+		}()
 	}
 
 	tsInt, err := strconv.ParseInt(msg.Timestamp, 10, 64)
@@ -221,7 +241,6 @@ func processMessage(
 	}
 
 	var timestamp time.Time
-
 	if tsInt > 1e12 {
 		timestamp = time.UnixMilli(tsInt)
 	} else {
@@ -256,7 +275,7 @@ func processMessage(
 			ConversationID: conversationID,
 			Data:           msgJSON,
 		}:
-			log.Println(" Mensagem enviadsa para WebSocked")
+			log.Println("Mensagem enviada para WebSocket")
 		default:
 			log.Println("Canal Broadcast cheio, descartando mensagem")
 		}

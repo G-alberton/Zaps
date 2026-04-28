@@ -5,6 +5,7 @@ import (
 	"ZAPS/internal/pagination"
 	"ZAPS/internal/repository"
 	"ZAPS/internal/websocket"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -15,6 +16,7 @@ type MessageService struct {
 	repo             *repository.MessageRepository
 	conversationRepo *repository.ConversationRepository
 	hub              *websocket.Hub
+	DB               *sql.DB
 }
 
 func NewMessageService(
@@ -164,4 +166,20 @@ func (s *MessageService) MarkAsRead(conversationID string) error {
 
 func (s *MessageService) UpdateStatus(messageID string, status string) error {
 	return s.repo.UpdateStatus(messageID, status)
+}
+
+func (s *MessageService) Exists(messageID string) (bool, error) {
+	var count int
+
+	err := s.DB.QueryRow(`
+		SELECT COUNT(1)
+		FROM messages
+		WHERE id = ?
+	`, messageID).Scan(&count)
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }

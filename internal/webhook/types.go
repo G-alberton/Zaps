@@ -50,7 +50,15 @@ type Change struct {
 
 type Value struct {
 	Messages []Message `json:"messages"`
+	Statuses []Status  `json:"statuses,omitempty"`
 	Contacts []Contact `json:"contacts"`
+}
+
+type Status struct {
+	ID        string `json:"id"`
+	Status    string `json:"status"`
+	Timestamp string `json:"timestamp"`
+	Recipient string `json:"recipient_id"`
 }
 
 type Contact struct {
