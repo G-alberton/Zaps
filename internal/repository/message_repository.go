@@ -236,3 +236,19 @@ func (r *MessageRepository) UpdateStatus(id string, status string) error {
 	_, err := r.DB.Exec(query, status, id)
 	return err
 }
+
+func (s *MessageRepository) Exists(messageID string) (bool, error) {
+	var count int
+
+	err := s.DB.QueryRow(`
+		SELECT COUNT(1)
+		FROM messages
+		WHERE id = ?
+	`, messageID).Scan(&count)
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}

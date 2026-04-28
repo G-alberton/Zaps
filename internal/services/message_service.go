@@ -169,17 +169,5 @@ func (s *MessageService) UpdateStatus(messageID string, status string) error {
 }
 
 func (s *MessageService) Exists(messageID string) (bool, error) {
-	var count int
-
-	err := s.DB.QueryRow(`
-		SELECT COUNT(1)
-		FROM messages
-		WHERE id = ?
-	`, messageID).Scan(&count)
-
-	if err != nil {
-		return false, err
-	}
-
-	return count > 0, nil
+	return s.repo.Exists(messageID)
 }
