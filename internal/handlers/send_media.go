@@ -6,22 +6,30 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+var phoneRegex = regexp.MustCompile(`^\d{10,15}$`)
 
 func SendMedia(
 	mediaService *services.MediaService,
 	messageService *services.MessageService,
 	conversationService *services.ConversationService,
 ) http.HandlerFunc {
+
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		ctx := r.Context()
+		defer r.Body.Close()
 
+		ctx := r.Context()
 		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
 
 		if r.Method != http.MethodPost {
@@ -38,6 +46,14 @@ func SendMedia(
 
 		if header.Size == 0 {
 			http.Error(w, "arquivo vazio", http.StatusBadRequest)
+			return
+		}
+
+		to := strings.TrimSpace(r.FormValue("to"))
+		caption := strings.TrimSpace(r.FormValue("caption"))
+
+		if !phoneRegex.MatchString(to) {
+			http.Error(w, "numero invalido (use formato internacional: 5511999999999)", http.StatusBadRequest)
 			return
 		}
 
@@ -63,22 +79,9 @@ func SendMedia(
 			return
 		}
 
-		if strings.HasPrefix(realType, "application/") && realType != "application/pdf" {
-			http.Error(w, "somente PDF permitido", 400)
-			return
-		}
-
 		_, err = file.Seek(0, io.SeekStart)
 		if err != nil {
 			http.Error(w, "erro ao reposicionar arquivo", 500)
-			return
-		}
-
-		to := strings.TrimSpace(r.FormValue("to"))
-		caption := r.FormValue("caption")
-
-		if to == "" {
-			http.Error(w, "destinatário obrigatório", http.StatusBadRequest)
 			return
 		}
 
@@ -87,13 +90,18 @@ func SendMedia(
 			strings.ReplaceAll(filepath.Base(header.Filename), " ", "_"),
 		)
 
-		var folder string
-		if strings.HasPrefix(realType, "image/") {
+		var folder, msgType string
+
+		switch {
+		case strings.HasPrefix(realType, "image/"):
 			folder = "images"
-		} else if strings.HasPrefix(realType, "audio/") {
+			msgType = "image"
+		case strings.HasPrefix(realType, "audio/"):
 			folder = "audio"
-		} else {
+			msgType = "audio"
+		default:
 			folder = "files"
+			msgType = "document"
 		}
 
 		fullPath := filepath.Join("uploads", folder, filename)
@@ -115,102 +123,80 @@ func SendMedia(
 			return
 		}
 
-		publicURL := fmt.Sprintf("https://salutatory-unsymbolical-preston.ngrok-free.dev/uploads/%s/%s", folder, filename)
-
-		var mediaID string
-
-		if strings.HasPrefix(realType, "image/") {
-
-			mediaIDUpload, errUpload := mediaService.UploadMedia(ctx, fullPath)
-			if errUpload != nil {
-				http.Error(w, errUpload.Error(), 500)
-				return
-			}
-
-			err = mediaService.SendImageByID(ctx, to, mediaIDUpload, caption)
-			if err != nil {
-				http.Error(w, err.Error(), 500)
-				return
-			}
-
-			mediaID = mediaIDUpload
-
-		} else if strings.HasPrefix(realType, "audio/") {
-
-			mediaIDUpload, errUpload := mediaService.UploadMedia(ctx, fullPath)
-			if errUpload != nil {
-				http.Error(w, errUpload.Error(), 500)
-				return
-			}
-
-			err = mediaService.SendAudioByID(ctx, to, mediaIDUpload)
-			if err != nil {
-				http.Error(w, err.Error(), 500)
-				return
-			}
-
-			mediaID = mediaIDUpload
-
-		} else if strings.HasPrefix(realType, "application/") {
-
-			mediaIDUpload, errUpload := mediaService.UploadMedia(ctx, fullPath)
-			if errUpload != nil {
-				http.Error(w, errUpload.Error(), 500)
-				return
-			}
-
-			err = mediaService.SendDocumentByID(
-				ctx,
-				to,
-				mediaIDUpload,
-				caption,
-				header.Filename,
-			)
-			if err != nil {
-				http.Error(w, err.Error(), 500)
-				return
-			}
-
-			mediaID = mediaIDUpload
+		baseURL := os.Getenv("BASE_URL")
+		if baseURL == "" {
+			http.Error(w, "BASE_URL não configurada", 500)
+			return
 		}
 
-		// ✅ CORREÇÃO: pegar conversationID
+		publicURL := fmt.Sprintf("%s/uploads/%s/%s", baseURL, folder, filename)
+
 		conversationID, err := conversationService.GetOrCreate(to)
 		if err != nil {
 			http.Error(w, "erro ao obter conversa", 500)
 			return
 		}
 
-		var msgType string
-
-		if strings.HasPrefix(realType, "image/") {
-			msgType = "image"
-		} else if strings.HasPrefix(realType, "audio/") {
-			msgType = "audio"
-		} else {
-			msgType = "document"
-		}
-
-		err = messageService.SaveMessage(models.Message{
+		message := models.Message{
+			ID:             uuid.New().String(),
 			ConversationID: conversationID,
 			From:           "system",
 			Type:           msgType,
 			Body:           caption,
-			MediaID:        mediaID,
 			MediaURL:       publicURL,
 			Direction:      "outbound",
-			Status:         "sent",
+			Status:         "pending",
 			Timestamp:      time.Now(),
-		})
+		}
 
-		if err != nil {
+		if err := messageService.SaveMessage(message); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
 
+		mediaID, err := mediaService.UploadMedia(ctx, fullPath)
+
+		if err != nil {
+			log.Println("erro upload:", err)
+			message.Status = "failed"
+		} else {
+
+			message.MediaID = mediaID
+
+			switch msgType {
+			case "image":
+				err = mediaService.SendImageByID(ctx, to, mediaID, caption)
+			case "audio":
+				err = mediaService.SendAudioByID(ctx, to, mediaID)
+			case "document":
+				err = mediaService.SendDocumentByID(ctx, to, mediaID, caption, header.Filename)
+			}
+
+			if err != nil {
+				log.Println("erro envio:", err)
+				message.Status = "failed"
+			} else {
+				message.Status = "sent"
+			}
+		}
+
+		if err := messageService.UpdateStatus(message.ID, message.Status); err != nil {
+			log.Println("erro ao atualizar status:", err)
+		}
+
+		statusCode := http.StatusOK
+		if message.Status == "failed" {
+			statusCode = http.StatusBadGateway
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"url": publicURL,
+		w.WriteHeader(statusCode)
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":          message.Status,
+			"conversation_id": conversationID,
+			"to":              to,
+			"url":             publicURL,
 		})
 	}
 }
