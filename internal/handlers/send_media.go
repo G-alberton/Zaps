@@ -3,6 +3,7 @@ package handlers
 import (
 	"ZAPS/internal/models"
 	"ZAPS/internal/services"
+	"ZAPS/internal/websocket"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,6 +24,7 @@ func SendMedia(
 	mediaService *services.MediaService,
 	messageService *services.MessageService,
 	conversationService *services.ConversationService,
+	hub *websocket.Hub,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +55,7 @@ func SendMedia(
 		caption := strings.TrimSpace(r.FormValue("caption"))
 
 		if !phoneRegex.MatchString(to) {
-			http.Error(w, "numero invalido (use formato internacional: 5511999999999)", http.StatusBadRequest)
+			http.Error(w, "numero invalido (ex: 5511999999999)", http.StatusBadRequest)
 			return
 		}
 
@@ -74,7 +76,6 @@ func SendMedia(
 		if !strings.HasPrefix(realType, "image/") &&
 			!strings.HasPrefix(realType, "audio/") &&
 			realType != "application/pdf" {
-
 			http.Error(w, "tipo de arquivo não permitido", 400)
 			return
 		}
@@ -84,11 +85,6 @@ func SendMedia(
 			http.Error(w, "erro ao reposicionar arquivo", 500)
 			return
 		}
-
-		filename := fmt.Sprintf("%d_%s",
-			time.Now().Unix(),
-			strings.ReplaceAll(filepath.Base(header.Filename), " ", "_"),
-		)
 
 		var folder, msgType string
 
@@ -103,6 +99,11 @@ func SendMedia(
 			folder = "files"
 			msgType = "document"
 		}
+
+		filename := fmt.Sprintf("%d_%s",
+			time.Now().Unix(),
+			strings.ReplaceAll(filepath.Base(header.Filename), " ", "_"),
+		)
 
 		fullPath := filepath.Join("uploads", folder, filename)
 
@@ -154,49 +155,74 @@ func SendMedia(
 			return
 		}
 
-		mediaID, err := mediaService.UploadMedia(ctx, fullPath)
+		if hub != nil {
+			msgJSON, _ := json.Marshal(message)
 
-		if err != nil {
-			log.Println("erro upload:", err)
-			message.Status = "failed"
-		} else {
-
-			message.MediaID = mediaID
-
-			switch msgType {
-			case "image":
-				err = mediaService.SendImageByID(ctx, to, mediaID, caption)
-			case "audio":
-				err = mediaService.SendAudioByID(ctx, to, mediaID)
-			case "document":
-				err = mediaService.SendDocumentByID(ctx, to, mediaID, caption, header.Filename)
+			select {
+			case hub.Broadcast <- websocket.MessagePayload{
+				ConversationID: message.ConversationID,
+				Data:           msgJSON,
+			}:
+			default:
+				log.Println("Broadcast cheio")
 			}
+		}
+
+		go func(msg models.Message) {
+
+			mediaID, err := mediaService.UploadMedia(ctx, fullPath)
+
+			var newStatus string
 
 			if err != nil {
-				log.Println("erro envio:", err)
-				message.Status = "failed"
+				log.Println("erro upload:", err)
+				newStatus = "failed"
 			} else {
-				message.Status = "sent"
+
+				msg.MediaID = mediaID
+
+				switch msg.Type {
+				case "image":
+					err = mediaService.SendImageByID(ctx, to, mediaID, caption)
+				case "audio":
+					err = mediaService.SendAudioByID(ctx, to, mediaID)
+				case "document":
+					err = mediaService.SendDocumentByID(ctx, to, mediaID, caption, header.Filename)
+				}
+
+				if err != nil {
+					log.Println("erro envio:", err)
+					newStatus = "failed"
+				} else {
+					newStatus = "sent"
+				}
 			}
-		}
 
-		if err := messageService.UpdateStatus(message.ID, message.Status); err != nil {
-			log.Println("erro ao atualizar status:", err)
-		}
+			if err := messageService.UpdateStatus(msg.ID, newStatus); err != nil {
+				log.Println("erro ao atualizar status:", err)
+			}
 
-		statusCode := http.StatusOK
-		if message.Status == "failed" {
-			statusCode = http.StatusBadGateway
-		}
+			msg.Status = newStatus
+
+			if hub != nil {
+				msgJSON, _ := json.Marshal(msg)
+
+				select {
+				case hub.Broadcast <- websocket.MessagePayload{
+					ConversationID: msg.ConversationID,
+					Data:           msgJSON,
+				}:
+				default:
+					log.Println("Broadcast cheio")
+				}
+			}
+
+		}(message)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":          message.Status,
+			"status":          "processing",
 			"conversation_id": conversationID,
-			"to":              to,
-			"url":             publicURL,
 		})
 	}
 }

@@ -155,21 +155,28 @@ func main() {
 		authMiddleware(http.HandlerFunc(handlers.MarkAsRead(messageService))),
 	)
 
-	mux.Handle("/send-message",
-		authMiddleware(http.HandlerFunc(handlers.SendMessage(
-			mediaService,
-			messageService,
-			conversationService,
-			hub,
-		))),
+	mux.Handle(
+		"/send-message",
+		authMiddleware(
+			handlers.SendMessage(
+				mediaService,
+				messageService,
+				conversationService,
+				hub,
+			),
+		),
 	)
 
-	mux.Handle("/send-media",
-		authMiddleware(http.HandlerFunc(handlers.SendMedia(
-			mediaService,
-			messageService,
-			conversationService,
-		))),
+	mux.Handle(
+		"/send-media",
+		authMiddleware(
+			handlers.SendMedia(
+				mediaService,
+				messageService,
+				conversationService,
+				hub,
+			),
+		),
 	)
 
 	mux.Handle("/conversations",
