@@ -473,13 +473,30 @@ function cleaNumber(num) {
     return num.toString().replace(/\D/g, '');
 }
 
-function createMessageHTML(content = "", time = "", type = "text", side = "sent", caption = "") {
+function createMessageHTML(
+    content = "",
+    time = "",
+    type = "text",
+    side = "sent",
+    caption = "",
+    status = "sent",
+    messageId = ""
+) {
     const isSent = side === 'sent';
-    const safeContent =  content ?? "";
+    const safeContent = content ?? "";
     const safeCaption = caption ?? "";
-    const checks = isSent ? '<span class="message-checks">✓✓</span>' : '';
 
-    const playSymbol = '\u25B6\uFE0E';
+    let statusIcon = "";
+    let retryBtn = "";
+
+    if (isSent) {
+        if (status === "pending") statusIcon = "⏳";
+        else if (status === "sent") statusIcon = "✓";
+        else if (status === "failed") {
+            statusIcon = "❌";
+            retryBtn = `<button class="retry-btn" onclick="retryMessage('${messageId}')">🔁</button>`;
+        }
+    }
 
     let mainContentHTML = "";
 
@@ -488,53 +505,74 @@ function createMessageHTML(content = "", time = "", type = "text", side = "sent"
             <div class="message-media">
                 <img src="${safeContent}" class="msg-img" style="width:100%; border-radius:8px; display:block;">
             </div>`;
-    } else if (type === 'file'){
+    } else if (type === 'file') {
         mainContentHTML = `
-            <div class="file-wrapper" style="background:rgba(0,0,0,0.1); padding:10px; border-radius:8px; display:flex; align-items:center; gap:10px; color:inherit;">
+            <div class="file-wrapper" style="background:rgba(0,0,0,0.1); padding:10px; border-radius:8px; display:flex; align-items:center; gap:10px;">
                 <span>📂</span> <small style="word-break:break-all;">${safeContent}</small>
-            </div>
-        `
+            </div>`;
     } else if (type === 'audio') {
-    mainContentHTML = `
-    <div class="audio-player-container" data-audio="${content}">
-        <button class="audio-play-btn">▶</button>
-
-        <div class="audio-wave">
-            <div class="audio-progress"></div>
-        </div>
-
-        <span class="audio-duration">00:00</span>
-
-        <audio src="${content}"></audio>
-    </div>
-    `;
-    }else {
+        mainContentHTML = `
+            <div class="audio-player-container" data-audio="${content}">
+                <button class="audio-play-btn">▶</button>
+                <div class="audio-wave">
+                    <div class="audio-progress"></div>
+                </div>
+                <span class="audio-duration">00:00</span>
+                <audio src="${content}"></audio>
+            </div>`;
+    } else {
         mainContentHTML = `<div class="message-text">${safeContent}</div>`;
     }
 
-    const captionHTML = (safeCaption && type !== 'text') 
-        ? `<div class="message-caption" style="margin-top:8px; font-size:0.95rem;">${safeCaption}</div>` 
+    const captionHTML = (safeCaption && type !== 'text')
+        ? `<div class="message-caption" style="margin-top:8px;">${safeCaption}</div>`
         : "";
 
     return `
-        <div class="message-bubble ${type === 'audio' ? 'audio-bubble' : ''}">
+        <div class="message-bubble ${type === 'audio' ? 'audio-bubble' : ''}" data-id="${messageId}">
+            
             <div class="message-options-btn"><span>&#9013;</span></div>
+            
             <div class="message-menu">
                 ${type !== 'audio' ? '<button onclick="handleReply(this)">Responder</button>' : ''}
                 ${type !== 'audio' ? '<button onclick="handleCopy(this)">Copiar</button>' : ''}
                 <button class="delete-btn" onclick="handleDelete(this)">Apagar</button>
             </div>
-            
+
             ${mainContentHTML}
             ${captionHTML}
-            
-            <span class="message-time">${time} ${checks}</span>
+
+            <span class="message-time">
+                ${time} ${statusIcon}
+            </span>
+
+            ${retryBtn}
+
         </div>
     `;
-    
 }
 
 async function sendMessage() {
+    const chatInput =  document.getElementById('chat-input');
+    const text = chatInput.value.trim();
+
+    if (!activeContact) {
+        alert("Selecione um contato");
+        return;
+    }
+
+    const now = new Date();
+    const time = now.getHours().toString().padStart(2, '0') + ":" +
+                 now.getMinutes().toString().padStart(2, '0');
+
+    if (pendingFile) {
+        const messageID = crypto.randomUUID();
+
+        const type = 
+    }
+}
+
+/*async function sendMessage() {
     const chatInput = document.getElementById('chat-input');
     const text = chatInput.value.trim();
 
@@ -593,7 +631,7 @@ async function sendMessage() {
             console.error("Erro ao enviar mensagem:", err);
         }
     }
-}
+}*/
 
 function toggleInputButtons(text) {
     const sendBtn = document.querySelector('.send-button');
@@ -666,16 +704,6 @@ async function startRec(e){
         console.log("Erro ao acessar microfone:", err);
     }
 
-    /*const stream = await navigator.mediaDevices.getUserMedia({audio: true});
-
-    mediaRecorder = new MediaRecorder(stream);
-    audioChunks = [];
-
-    mediaRecorder.ondataavailable = e => {
-        audioChunks.push(e.data);
-    };
-
-    mediaRecorder.start();*/
 }
 
 function stopRec() {
@@ -733,6 +761,36 @@ function stopRec() {
 function scrollToBottom() {
     const messagesContainer = document.querySelector('.messages-container');
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function updateMessageStatus(messageID, newStatus) {
+    const msg = document.querySelector(`[data-id="${messageID}"]`);
+    if (!msg) return;
+
+    const timeEl = msg.querySelector('.message-time');
+    if (!timeEl) return;
+
+    let icon = "";
+    if (newStatus === "pending") icon = "⏳";
+    if (newStatus === "sent") icon = "✓";
+    if (newStatus === "failed") icon = "❌";
+
+    const time = timeEl.getAttribute("data-time") || timeEl.innerText.split(" ")[0];
+
+    timeEl.setAttribute("data-time", time);
+    timeEl.innerHTML = `${time} ${icon}`;
+
+    const oldBtn = msg.querySelector('.retry-btn');
+    if (oldBtn) oldBtn.remove();
+
+    if (newStatus === "failed"){
+        const btn = document.createElement("button");
+         btn.innerText = "🔁";
+        btn.classList.add("retry-btn");
+        btn.onclick = () => retryMessage(messageId);
+        msg.appendChild(btn);
+    }
+
 }
 
 function handleChatInput(e) {
