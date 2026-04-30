@@ -1,6 +1,13 @@
 package main
 
 import (
+	"context"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
 	"ZAPS/internal/auth"
 	"ZAPS/internal/database"
 	"ZAPS/internal/handlers"
@@ -10,12 +17,6 @@ import (
 	"ZAPS/internal/services"
 	"ZAPS/internal/webhook"
 	"ZAPS/internal/websocket"
-	"context"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
 
 	"github.com/joho/godotenv"
 
@@ -26,7 +27,7 @@ func enableCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Message-ID")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 
 		if r.Method == "OPTIONS" {
@@ -51,8 +52,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 
 func main() {
 
-	err := godotenv.Load()
-	if err != nil {
+	if err := godotenv.Load(); err != nil {
 		log.Println(".env não encontrado")
 	}
 
@@ -64,7 +64,7 @@ func main() {
 
 	jwtService := &auth.JWTService{
 		Secret: []byte("super-secret"),
-		Expire: time.Hour * 24,
+		Expire: 24 * time.Hour,
 	}
 
 	authMiddleware := middleware.AuthMiddleware(jwtService)
@@ -86,11 +86,19 @@ func main() {
 
 	mediaService := services.NewMediaService()
 	conversationService := services.NewConversationService(conversationRepo)
+
 	messageService := services.NewMessageService(
 		messageRepo,
 		conversationRepo,
 		hub,
 	)
+
+	sendService := services.NewSendService(
+		mediaService,
+		messageService,
+		hub,
+	)
+
 	contactService := services.NewContactService(nil)
 
 	conversationHandler := handlers.NewConversationHandler(
@@ -171,9 +179,9 @@ func main() {
 		"/send-media",
 		authMiddleware(
 			handlers.SendMedia(
-				mediaService,
 				messageService,
 				conversationService,
+				sendService,
 				hub,
 			),
 		),
