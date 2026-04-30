@@ -171,3 +171,31 @@ func (s *MessageService) UpdateStatus(messageID string, status string) error {
 func (s *MessageService) Exists(messageID string) (bool, error) {
 	return s.repo.Exists(messageID)
 }
+
+func (s *MessageService) GetByID(id string) (models.Message, error) {
+	var msg models.Message
+
+	query := `
+        SELECT id, conversation_id, "from", type, body, media_url, direction, status, timestamp
+        FROM messages
+        WHERE id = $1
+    `
+
+	err := s.DB.QueryRow(query, id).Scan(
+		&msg.ID,
+		&msg.ConversationID,
+		&msg.From,
+		&msg.Type,
+		&msg.Body,
+		&msg.MediaURL,
+		&msg.Direction,
+		&msg.Status,
+		&msg.Timestamp,
+	)
+
+	if err != nil {
+		return models.Message{}, err
+	}
+
+	return msg, nil
+}

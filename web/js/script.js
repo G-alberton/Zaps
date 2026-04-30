@@ -566,52 +566,86 @@ async function sendMessage() {
                  now.getMinutes().toString().padStart(2, '0');
 
     if (pendingFile) {
-        const messageID = crypto.randomUUID();
+        const messageId = crypto.randomUUID();
 
-        const type = 
-    }
-}
-
-/*async function sendMessage() {
-    const chatInput = document.getElementById('chat-input');
-    const text = chatInput.value.trim();
-
-    if (!activeContact) {
-        alert("Selecione um contato");
-        return;
-    }
-
-    const now = new Date();
-    const time = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0')
-
-    if (pendingFile) {
         const type = pendingFile.type.startsWith('image/') ? 'image' : 'file';
-        const content = pendingFile.name
-        
+        const content = pendingFile.name;
+
+        const container = document.querySelector('.messages-container');
+        const row = document.createElement('div');
+        row.classList.add('message-row', 'message-sent');
+
+        row.innerHTML = createMessageHTML(
+            content,
+            time,
+            type,
+            "sent",
+            text,
+            "pending",
+            messageId
+        );
+
+        container.appendChild(row);
+        scrollToBottom();
+
         const formData = new FormData();
-        formData.append("file", pendingFile);
+        formData.append("file", pendingFile)
         formData.append("to", activeContact);
-        formData.append("caption",text);
+        formData.append("caption", text)
 
-        await fetch("http://localhost:8080/send-media", {
-            method: "POST",
-            body: formData
-        })
-        await loadMessages(activeContact)
+        try {
+            const res = await fetch("http://localhost:8080/send-media", {
+                method: "POST",
+                headers: {
+                    "X-Message-ID": messageId
+                },
+                body: formData
+            });
 
-        pendingFile = null;
-        chatInput.placeholder = "Digite uma Mensagem";
+            if (!res.ok) throw new Error();
+
+            updateMessageStatus(messageId, "sent");
+
+        } catch (err) {
+            console.error("Erro ao enviar mídia:", err);
+            updateMessageStatus(messageId, "failed");
+        }
+
+        pendingFile =  null;
+        chatInput.value = "";
         return;
     }
 
     if (text !== "") {
-        try{
-            console.log("Enviando mensagem para:", activeContact);
+        const messageId = crypto.randomUUID();
 
-            await fetch("http://localhost:8080/send-message", {
+        const container = document.querySelector('.messages-container');
+        const row = document.createElement('div');
+        row.classList.add('message-row', 'message-sent');
+
+        row.innerHTML = createMessageHTML(
+            text,
+            time,
+            "text",
+            "sent",
+            "",
+            "pending",
+            messageId
+        );
+
+        container.appendChild(row)
+        scrollToBottom();
+
+        chatInput.value = "";
+        chatInput.style.height = 'auto';
+        toggleInputButtons("");
+
+        try {
+            const res = await fetch("http://localhost:8080/send-message", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "X-Message-ID": messageId
                 },
                 body: JSON.stringify({
                     to: activeContact,
@@ -619,19 +653,15 @@ async function sendMessage() {
                 })
             });
 
-            console.log("Mensagem enviada com sucesso");
+            if (!res.ok) throw new Error();
 
-            await loadMessages(activeContact)
-
-            chatInput.value = "";
-            chatInput.style.height = 'auto';
-            toggleInputButtons("");
-
+            updateMessageStatus(messageId, "sent");
         } catch (err) {
             console.error("Erro ao enviar mensagem:", err);
+            updateMessageStatus(messageId, "failed");
         }
     }
-}*/
+}
 
 function toggleInputButtons(text) {
     const sendBtn = document.querySelector('.send-button');
@@ -662,6 +692,35 @@ function receiveMessage(content, type = 'text') {
     }
 
     scrollToBottom();
+}
+
+async function retryMessage(messageId) {
+    const msgEl = document. querySelector(`[data-id="${messageId}"]`);
+    if (!msgEl) return;
+
+    const text = msgEl.querySelector('.message-text')?.innerText;
+
+    updateMessageStatus(messageId, "pending");
+
+    try {
+        const res = await fetch("http://localhost:8080/send-message", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Message-ID": messageId
+            },
+            body: JSON.stringify({
+                to: activeContact,
+                body: text
+            })
+        });
+
+        if (!res.ok) throw new Error();
+
+        updateMessageStatus(messageId, "sent");
+    } catch(err) {
+        updateMessageStatus(messageId, "failed")
+    }
 }
 
 function startTimer() {

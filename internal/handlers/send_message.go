@@ -24,7 +24,9 @@ func SendMessage(
 	conversationService *services.ConversationService,
 	hub *websocket.Hub,
 ) http.HandlerFunc {
+
 	var phoneRegex = regexp.MustCompile(`^\d{10,15}$`)
+
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		defer r.Body.Close()
@@ -39,6 +41,11 @@ func SendMessage(
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "invalid json", http.StatusBadRequest)
 			return
+		}
+
+		messageID := r.Header.Get("X-Message-ID")
+		if messageID == "" {
+			messageID = uuid.New().String()
 		}
 
 		if !phoneRegex.MatchString(req.To) {
@@ -60,7 +67,7 @@ func SendMessage(
 		}
 
 		message := models.Message{
-			ID:             uuid.New().String(),
+			ID:             messageID,
 			From:           "system",
 			ConversationID: conversationID,
 			Type:           "text",
@@ -70,21 +77,19 @@ func SendMessage(
 			Timestamp:      time.Now(),
 		}
 
-		if err := messageService.SaveMessage(message); err != nil {
-			http.Error(w, "erro ao salvar mensagem", 500)
-			return
+		exists, _ := messageService.Exists(message.ID)
+		if !exists {
+			if err := messageService.SaveMessage(message); err != nil {
+				http.Error(w, "erro ao salvar mensagem", 500)
+				return
+			}
 		}
 
 		if hub != nil {
 			msgJSON, _ := json.Marshal(message)
-
-			select {
-			case hub.Broadcast <- websocket.MessagePayload{
+			hub.Broadcast <- websocket.MessagePayload{
 				ConversationID: message.ConversationID,
 				Data:           msgJSON,
-			}:
-			default:
-				log.Println("Broadcast cheio")
 			}
 		}
 
@@ -92,30 +97,20 @@ func SendMessage(
 
 			err := mediaService.SendTextMessage(ctx, req.To, req.Body)
 
-			var newStatus string
+			newStatus := "sent"
 			if err != nil {
 				log.Println("erro envio:", err)
 				newStatus = "failed"
-			} else {
-				newStatus = "sent"
 			}
 
-			if err := messageService.UpdateStatus(msg.ID, newStatus); err != nil {
-				log.Println("erro ao atualizar status:", err)
-			}
-
+			messageService.UpdateStatus(msg.ID, newStatus)
 			msg.Status = newStatus
 
 			if hub != nil {
 				msgJSON, _ := json.Marshal(msg)
-
-				select {
-				case hub.Broadcast <- websocket.MessagePayload{
+				hub.Broadcast <- websocket.MessagePayload{
 					ConversationID: msg.ConversationID,
 					Data:           msgJSON,
-				}:
-				default:
-					log.Println("Broadcast cheio")
 				}
 			}
 

@@ -1,9 +1,8 @@
 package handlers
 
 import (
-	"ZAPS/internal/models"
-	"ZAPS/internal/services"
-	"ZAPS/internal/websocket"
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,10 +14,15 @@ import (
 	"strings"
 	"time"
 
+	"ZAPS/internal/models"
+	"ZAPS/internal/services"
+	"ZAPS/internal/websocket"
+
 	"github.com/google/uuid"
 )
 
 var phoneRegex = regexp.MustCompile(`^\d{10,15}$`)
+var fileSafeRegex = regexp.MustCompile(`[^a-zA-Z0-9._-]`)
 
 func SendMedia(
 	mediaService *services.MediaService,
@@ -28,14 +32,27 @@ func SendMedia(
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		defer r.Body.Close()
 
-		ctx := r.Context()
 		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
 
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		messageID := r.Header.Get("X-Message-ID")
+		if messageID == "" {
+			messageID = uuid.New().String()
+		}
+
+		if _, err := messageService.GetByID(messageID); err == nil {
+			json.NewEncoder(w).Encode(map[string]string{
+				"status": "already_processed",
+			})
+			return
+		} else if err != sql.ErrNoRows {
+			http.Error(w, "erro interno", 500)
 			return
 		}
 
@@ -97,14 +114,13 @@ func SendMedia(
 			msgType = "audio"
 		default:
 			folder = "files"
-			msgType = "document"
+			msgType = "file"
 		}
 
-		filename := fmt.Sprintf("%d_%s",
-			time.Now().Unix(),
-			strings.ReplaceAll(filepath.Base(header.Filename), " ", "_"),
-		)
+		safeName := strings.ReplaceAll(header.Filename, " ", "_")
+		safeName = fileSafeRegex.ReplaceAllString(safeName, "")
 
+		filename := fmt.Sprintf("%d_%s", time.Now().Unix(), safeName)
 		fullPath := filepath.Join("uploads", folder, filename)
 
 		if err := os.MkdirAll(filepath.Dir(fullPath), os.ModePerm); err != nil {
@@ -139,7 +155,7 @@ func SendMedia(
 		}
 
 		message := models.Message{
-			ID:             uuid.New().String(),
+			ID:             messageID,
 			ConversationID: conversationID,
 			From:           "system",
 			Type:           msgType,
@@ -151,26 +167,25 @@ func SendMedia(
 		}
 
 		if err := messageService.SaveMessage(message); err != nil {
+			if strings.Contains(err.Error(), "duplicate") {
+				json.NewEncoder(w).Encode(map[string]string{
+					"status": "already_processed",
+				})
+				return
+			}
 			http.Error(w, err.Error(), 500)
 			return
 		}
 
 		if hub != nil {
-			msgJSON, _ := json.Marshal(message)
-
-			select {
-			case hub.Broadcast <- websocket.MessagePayload{
-				ConversationID: message.ConversationID,
-				Data:           msgJSON,
-			}:
-			default:
-				log.Println("Broadcast cheio")
-			}
+			broadcast(hub, message)
 		}
 
-		go func(msg models.Message) {
+		go func(msg models.Message, filePath string, filename string) {
 
-			mediaID, err := mediaService.UploadMedia(ctx, fullPath)
+			ctx := context.Background()
+
+			mediaID, err := mediaService.UploadMedia(ctx, filePath)
 
 			var newStatus string
 
@@ -178,7 +193,6 @@ func SendMedia(
 				log.Println("erro upload:", err)
 				newStatus = "failed"
 			} else {
-
 				msg.MediaID = mediaID
 
 				switch msg.Type {
@@ -186,8 +200,8 @@ func SendMedia(
 					err = mediaService.SendImageByID(ctx, to, mediaID, caption)
 				case "audio":
 					err = mediaService.SendAudioByID(ctx, to, mediaID)
-				case "document":
-					err = mediaService.SendDocumentByID(ctx, to, mediaID, caption, header.Filename)
+				case "file":
+					err = mediaService.SendDocumentByID(ctx, to, mediaID, caption, filename)
 				}
 
 				if err != nil {
@@ -205,24 +219,29 @@ func SendMedia(
 			msg.Status = newStatus
 
 			if hub != nil {
-				msgJSON, _ := json.Marshal(msg)
-
-				select {
-				case hub.Broadcast <- websocket.MessagePayload{
-					ConversationID: msg.ConversationID,
-					Data:           msgJSON,
-				}:
-				default:
-					log.Println("Broadcast cheio")
-				}
+				broadcast(hub, msg)
 			}
 
-		}(message)
+		}(message, fullPath, safeName)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":          "processing",
 			"conversation_id": conversationID,
+			"message_id":      messageID,
 		})
+	}
+}
+
+func broadcast(hub *websocket.Hub, msg models.Message) {
+	msgJSON, _ := json.Marshal(msg)
+
+	select {
+	case hub.Broadcast <- websocket.MessagePayload{
+		ConversationID: msg.ConversationID,
+		Data:           msgJSON,
+	}:
+	default:
+		log.Println("Broadcast cheio")
 	}
 }
