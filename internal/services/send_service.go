@@ -16,7 +16,6 @@ type SendService struct {
 	Hub            *websocket.Hub
 }
 
-// ✅ EXPORTADO
 func NewSendService(
 	media *MediaService,
 	message *MessageService,
@@ -67,14 +66,9 @@ func (s *SendService) SendWithRetry(
 		}
 	}
 
-	// ❗ Só aqui marca como failed definitivo
 	s.updateStatus(msg, "failed")
 	log.Println("Falha definitiva:", msg.ID)
 }
-
-// -------------------------
-// 🔧 HELPERS
-// -------------------------
 
 func (s *SendService) sendByType(
 	ctx context.Context,
