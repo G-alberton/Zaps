@@ -39,7 +39,6 @@ func SendMedia(
 			return
 		}
 
-		// IDEMPOTÊNCIA
 		messageID := r.Header.Get("X-Message-ID")
 		if messageID == "" {
 			messageID = uuid.New().String()
@@ -122,7 +121,6 @@ func SendMedia(
 			broadcast(hub, message)
 		}
 
-		// 🔥 RETRY ASSÍNCRONO
 		go sendService.SendWithRetry(
 			message,
 			to,
