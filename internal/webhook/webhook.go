@@ -9,11 +9,12 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
 
-const verifyToken = "123456"
+var verifyToken = os.Getenv("VERIFY_TOKEN")
 
 func init() {
 	if verifyToken == "" {
@@ -72,7 +73,6 @@ func HandleWebhook(
 				return
 			}
 
-			// ✅ resposta imediata (recomendado pelo Meta)
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("EVENT_RECEIVED"))
 
